@@ -15,7 +15,8 @@ class AdminArticleController extends Controller
     }
 
     public function published()
-    {
+    {  
+        //return 
         $articles = $this->articleService->getAdminArticlesByStatus('published');
         return response()->json($articles);
     }
