@@ -1,0 +1,795 @@
+{
+  "info": {
+    "name": "Q-Blogs API",
+    "description": "Complete Postman collection for the Q-Blogs Laravel API. Base URL: http://localhost/q_blogs/api/v1. Auth: Basic Auth (sml_system_integrator / Z@p7-Wx2!_mKq9_Rst5).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "basic",
+    "basic": [
+      { "key": "username", "value": "{{basic_auth_username}}", "type": "string" },
+      { "key": "password", "value": "{{basic_auth_password}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost/q_blogs/api/v1", "type": "string" },
+    { "key": "basic_auth_username", "value": "sml_system_integrator", "type": "string" },
+    { "key": "basic_auth_password", "value": "Z@p7-Wx2!_mKq9_Rst5", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"secret\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/auth/refresh", "host": ["{{base_url}}"], "path": ["auth", "refresh"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/auth/logout", "host": ["{{base_url}}"], "path": ["auth", "logout"] }
+          }
+        },
+        {
+          "name": "Me (Current User)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/me", "host": ["{{base_url}}"], "path": ["auth", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Public Articles",
+      "item": [
+        {
+          "name": "Featured Articles",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/articles/featured", "host": ["{{base_url}}"], "path": ["articles", "featured"] }
+          }
+        },
+        {
+          "name": "List Articles",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/articles?sort=latest&limit=12",
+              "host": ["{{base_url}}"],
+              "path": ["articles"],
+              "query": [
+                { "key": "category", "value": "", "disabled": true },
+                { "key": "author", "value": "", "disabled": true },
+                { "key": "tag", "value": "", "disabled": true },
+                { "key": "sort", "value": "latest" },
+                { "key": "limit", "value": "12" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Articles",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/articles/search?q=keyword",
+              "host": ["{{base_url}}"],
+              "path": ["articles", "search"],
+              "query": [{ "key": "q", "value": "keyword" }]
+            }
+          }
+        },
+        {
+          "name": "Get Article by Slug",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/articles/:slug", "host": ["{{base_url}}"], "path": ["articles", ":slug"], "variable": [{ "key": "slug", "value": "my-article-slug" }] }
+          }
+        },
+        {
+          "name": "Related Articles",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/articles/:id/related", "host": ["{{base_url}}"], "path": ["articles", ":id", "related"], "variable": [{ "key": "id", "value": "1" }] }
+          }
+        },
+        {
+          "name": "Download Article PDF",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/pdf" }],
+            "url": { "raw": "{{base_url}}/articles/:id/pdf", "host": ["{{base_url}}"], "path": ["articles", ":id", "pdf"], "variable": [{ "key": "id", "value": "1" }] }
+          }
+        },
+        {
+          "name": "Track View",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/articles/:id/view", "host": ["{{base_url}}"], "path": ["articles", ":id", "view"], "variable": [{ "key": "id", "value": "1" }] }
+          }
+        },
+        {
+          "name": "Track Share",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/articles/:id/share", "host": ["{{base_url}}"], "path": ["articles", ":id", "share"], "variable": [{ "key": "id", "value": "1" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. CMS Articles",
+      "item": [
+        {
+          "name": "Create Article",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"My New Article\",\n  \"content\": \"This is the full article content.\",\n  \"summary\": \"A brief summary of the article.\",\n  \"category_id\": 1,\n  \"tags\": [1, 2],\n  \"is_featured\": false,\n  \"inputter_id\": 505,\n  \"authoriser_id\": 505,\n  \"status\": \"pending\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/cms/articles", "host": ["{{base_url}}"], "path": ["cms", "articles"] }
+          }
+        },
+        {
+          "name": "Get Article by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/cms/articles/:id", "host": ["{{base_url}}"], "path": ["cms", "articles", ":id"], "variable": [{ "key": "id", "value": "1" }] }
+          }
+        },
+        {
+          "name": "Update Article",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Title\",\n  \"content\": \"Updated content.\",\n  \"summary\": \"Updated summary.\",\n  \"category_id\": 1,\n  \"tags\": [1],\n  \"is_featured\": true,\n  \"status\": \"draft\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/cms/articles/:id", "host": ["{{base_url}}"], "path": ["cms", "articles", ":id"], "variable": [{ "key": "id", "value": "1" }] }
+          }
+        },
+        {
+          "name": "Delete Article",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/cms/articles/:id", "host": ["{{base_url}}"], "path": ["cms", "articles", ":id"], "variable": [{ "key": "id", "value": "1" }] }
+          }
+        },
+        {
+          "name": "Save as Draft",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/cms/articles/:id/save-draft", "host": ["{{base_url}}"], "path": ["cms", "articles", ":id", "save-draft"], "variable": [{ "key": "id", "value": "1" }] }
+          }
+        },
+        {
+          "name": "Preview Article (Markdown to HTML)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"**Bold text** and *italic text*.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/cms/articles/preview", "host": ["{{base_url}}"], "path": ["cms", "articles", "preview"] }
+          }
+        },
+        {
+          "name": "Publish Article",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/cms/articles/:id/publish", "host": ["{{base_url}}"], "path": ["cms", "articles", ":id", "publish"], "variable": [{ "key": "id", "value": "1" }] }
+          }
+        },
+        {
+          "name": "Unpublish Article",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/cms/articles/:id/unpublish", "host": ["{{base_url}}"], "path": ["cms", "articles", ":id", "unpublish"], "variable": [{ "key": "id", "value": "1" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. My Articles",
+      "item": [
+        {
+          "name": "My Published Articles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/cms/my-articles/published", "host": ["{{base_url}}"], "path": ["cms", "my-articles", "published"] }
+          }
+        },
+        {
+          "name": "My Draft Articles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/cms/my-articles/drafts", "host": ["{{base_url}}"], "path": ["cms", "my-articles", "drafts"] }
+          }
+        },
+        {
+          "name": "My Pending Articles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/cms/my-articles/pending", "host": ["{{base_url}}"], "path": ["cms", "my-articles", "pending"] }
+          }
+        },
+        {
+          "name": "My Rejected Articles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/cms/my-articles/rejected", "host": ["{{base_url}}"], "path": ["cms", "my-articles", "rejected"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Admin Articles",
+      "item": [
+        {
+          "name": "All Published Articles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/cms/admin/articles/published", "host": ["{{base_url}}"], "path": ["cms", "admin", "articles", "published"] }
+          }
+        },
+        {
+          "name": "All Unpublished Articles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/cms/admin/articles/unpublished", "host": ["{{base_url}}"], "path": ["cms", "admin", "articles", "unpublished"] }
+          }
+        },
+        {
+          "name": "All Pending Articles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/cms/admin/articles/pending", "host": ["{{base_url}}"], "path": ["cms", "admin", "articles", "pending"] }
+          }
+        },
+        {
+          "name": "All Rejected Articles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/cms/admin/articles/rejected", "host": ["{{base_url}}"], "path": ["cms", "admin", "articles", "rejected"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Approval Workflow",
+      "item": [
+        {
+          "name": "Approve Article",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Well written and factually accurate.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/approvals/:articleId/approve", "host": ["{{base_url}}"], "path": ["approvals", ":articleId", "approve"], "variable": [{ "key": "articleId", "value": "1" }] }
+          }
+        },
+        {
+          "name": "Reject Article",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Content needs revision before publishing.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/approvals/:articleId/reject", "host": ["{{base_url}}"], "path": ["approvals", ":articleId", "reject"], "variable": [{ "key": "articleId", "value": "1" }] }
+          }
+        },
+        {
+          "name": "Approval History",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/approvals/:articleId/history", "host": ["{{base_url}}"], "path": ["approvals", ":articleId", "history"], "variable": [{ "key": "articleId", "value": "1" }] }
+          }
+        },
+        {
+          "name": "Pending Count",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/approvals/pending/count", "host": ["{{base_url}}"], "path": ["approvals", "pending", "count"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Categories",
+      "item": [
+        {
+          "name": "List Categories",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/categories", "host": ["{{base_url}}"], "path": ["categories"] }
+          }
+        },
+        {
+          "name": "Get Category",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/categories/:id", "host": ["{{base_url}}"], "path": ["categories", ":id"], "variable": [{ "key": "id", "value": "1" }] }
+          }
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Technology\",\n  \"description\": \"Articles about tech trends.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/categories", "host": ["{{base_url}}"], "path": ["categories"] }
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tech and Innovation\",\n  \"description\": \"Updated description.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/categories/:id", "host": ["{{base_url}}"], "path": ["categories", ":id"], "variable": [{ "key": "id", "value": "1" }] }
+          }
+        },
+        {
+          "name": "Deactivate Category",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/categories/:id/deactivate", "host": ["{{base_url}}"], "path": ["categories", ":id", "deactivate"], "variable": [{ "key": "id", "value": "1" }] }
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/categories/:id", "host": ["{{base_url}}"], "path": ["categories", ":id"], "variable": [{ "key": "id", "value": "1" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Tags",
+      "item": [
+        {
+          "name": "List Tags",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/tags", "host": ["{{base_url}}"], "path": ["tags"] }
+          }
+        },
+        {
+          "name": "Create Tag",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"ESG\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/tags", "host": ["{{base_url}}"], "path": ["tags"] }
+          }
+        },
+        {
+          "name": "Update Tag",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"ESG Reporting\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/tags/:id", "host": ["{{base_url}}"], "path": ["tags", ":id"], "variable": [{ "key": "id", "value": "1" }] }
+          }
+        },
+        {
+          "name": "Delete Tag",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/tags/:id", "host": ["{{base_url}}"], "path": ["tags", ":id"], "variable": [{ "key": "id", "value": "1" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Media",
+      "item": [
+        {
+          "name": "Upload Media",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "file", "type": "file", "src": "" }]
+            },
+            "url": { "raw": "{{base_url}}/media/upload", "host": ["{{base_url}}"], "path": ["media", "upload"] }
+          }
+        },
+        {
+          "name": "List Media",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/media", "host": ["{{base_url}}"], "path": ["media"] }
+          }
+        },
+        {
+          "name": "Delete Media",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/media/:id", "host": ["{{base_url}}"], "path": ["media", ":id"], "variable": [{ "key": "id", "value": "1" }] }
+          }
+        },
+        {
+          "name": "Update Alt Text",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"alt_text\": \"A descriptive alt text for accessibility.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/media/:id/alt-text", "host": ["{{base_url}}"], "path": ["media", ":id", "alt-text"], "variable": [{ "key": "id", "value": "1" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Notifications",
+      "item": [
+        {
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/notifications", "host": ["{{base_url}}"], "path": ["notifications"] }
+          }
+        },
+        {
+          "name": "Mark Notification as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/notifications/:id/read", "host": ["{{base_url}}"], "path": ["notifications", ":id", "read"], "variable": [{ "key": "id", "value": "1" }] }
+          }
+        },
+        {
+          "name": "Mark All Notifications as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/notifications/read-all", "host": ["{{base_url}}"], "path": ["notifications", "read-all"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Analytics",
+      "item": [
+        {
+          "name": "Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/analytics/dashboard", "host": ["{{base_url}}"], "path": ["analytics", "dashboard"] }
+          }
+        },
+        {
+          "name": "Articles Analytics",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/analytics/articles", "host": ["{{base_url}}"], "path": ["analytics", "articles"] }
+          }
+        },
+        {
+          "name": "Top Articles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/analytics/top-articles", "host": ["{{base_url}}"], "path": ["analytics", "top-articles"] }
+          }
+        },
+        {
+          "name": "Top Categories",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/analytics/top-categories", "host": ["{{base_url}}"], "path": ["analytics", "top-categories"] }
+          }
+        },
+        {
+          "name": "Top Authors",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/analytics/top-authors", "host": ["{{base_url}}"], "path": ["analytics", "top-authors"] }
+          }
+        },
+        {
+          "name": "Traffic Sources",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/analytics/traffic-sources", "host": ["{{base_url}}"], "path": ["analytics", "traffic-sources"] }
+          }
+        },
+        {
+          "name": "Reading Time",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/analytics/reading-time", "host": ["{{base_url}}"], "path": ["analytics", "reading-time"] }
+          }
+        },
+        {
+          "name": "Shares Analytics",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/analytics/shares", "host": ["{{base_url}}"], "path": ["analytics", "shares"] }
+          }
+        },
+        {
+          "name": "Export CSV",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "text/csv" }],
+            "url": { "raw": "{{base_url}}/analytics/export/csv", "host": ["{{base_url}}"], "path": ["analytics", "export", "csv"] }
+          }
+        },
+        {
+          "name": "Export PDF",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/pdf" }],
+            "url": { "raw": "{{base_url}}/analytics/export/pdf", "host": ["{{base_url}}"], "path": ["analytics", "export", "pdf"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. Newsletter",
+      "item": [
+        {
+          "name": "Subscribe",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"subscriber@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/newsletter/subscribe", "host": ["{{base_url}}"], "path": ["newsletter", "subscribe"] }
+          }
+        },
+        {
+          "name": "Verify Captcha",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"captcha-token-here\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/newsletter/verify-captcha", "host": ["{{base_url}}"], "path": ["newsletter", "verify-captcha"] }
+          }
+        },
+        {
+          "name": "Check Subscription",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/newsletter/check?email=subscriber@example.com",
+              "host": ["{{base_url}}"],
+              "path": ["newsletter", "check"],
+              "query": [{ "key": "email", "value": "subscriber@example.com" }]
+            }
+          }
+        },
+        {
+          "name": "Sync Subscriptions",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/newsletter/sync", "host": ["{{base_url}}"], "path": ["newsletter", "sync"] }
+          }
+        },
+        {
+          "name": "List Subscribers",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/cms/subscribers?limit=15", "host": ["{{base_url}}"], "path": ["cms", "subscribers"], "query": [{ "key": "limit", "value": "15" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "13. System Utilities",
+      "item": [
+        {
+          "name": "Generate Slug",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"My Article Title Here\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/system/generate-slug", "host": ["{{base_url}}"], "path": ["system", "generate-slug"] }
+          }
+        },
+        {
+          "name": "Calculate Reading Time",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Paste your full article content here.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/system/reading-time", "host": ["{{base_url}}"], "path": ["system", "reading-time"] }
+          }
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] }
+          }
+        }
+      ]
+    }
+  ]
+}
