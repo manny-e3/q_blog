@@ -17,6 +17,7 @@ class Article extends Model
         'status',
         'reject_reason',
         'is_featured',
+        'featured_image',
         'inputter_id',
         'authoriser_id',
         'category_id',

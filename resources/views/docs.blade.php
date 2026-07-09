@@ -712,8 +712,8 @@
                         path: "/cms/articles",
                         desc: "Create a new article. If an authoriser_id is specified, the review notification will be sent only to that authoriser.",
                         auth: true,
-                        body: { title: "Nigeria Market Cap", content: "### Content info", category_id: 1, tags: [1], is_featured: false, inputter_id: 2, authoriser_id: 1 },
-                        response: { id: 10, title: "Nigeria Market Cap", slug: "nigeria-market-cap", status: "pending", authoriser_id: 1 }
+                        body: { title: "Nigeria Market Cap", content: "### Content info", category_id: 1, tags: [1], is_featured: false, inputter_id: 2, authoriser_id: 1, featured_image: "https://example.com/image.png" },
+                        response: { id: 10, title: "Nigeria Market Cap", slug: "nigeria-market-cap", status: "pending", authoriser_id: 1, featured_image: "/storage/media/1717318800_market_cap.png" }
                     },
                     {
                         method: "POST",

@@ -49,6 +49,25 @@ class CmsArticleController extends Controller
             }
         }
 
+        // Preprocess stringified fields for form-data requests
+        if ($request->has('tags') && is_string($request->input('tags'))) {
+            $decoded = json_decode($request->input('tags'), true);
+            if (is_array($decoded)) {
+                $request->merge(['tags' => $decoded]);
+            }
+        }
+
+        if ($request->has('is_featured')) {
+            $isFeatured = $request->input('is_featured');
+            if (is_string($isFeatured)) {
+                if ($isFeatured === 'true') {
+                    $request->merge(['is_featured' => true]);
+                } elseif ($isFeatured === 'false') {
+                    $request->merge(['is_featured' => false]);
+                }
+            }
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'content' => 'required|string',
@@ -60,6 +79,26 @@ class CmsArticleController extends Controller
             'inputter_id' => 'nullable|integer',
             'authoriser_id' => 'nullable|integer',
             'status' => 'nullable|string|in:draft,pending,published',
+            'featured_image' => [
+                'nullable',
+                function ($attribute, $value, $fail) {
+                    if ($value instanceof \Illuminate\Http\UploadedFile) {
+                        $rules = ['image', 'max:20480'];
+                        $validator = \Illuminate\Support\Facades\Validator::make([$attribute => $value], [$attribute => $rules]);
+                        if ($validator->fails()) {
+                            $fail($validator->errors()->first($attribute));
+                        }
+                    } elseif (is_string($value)) {
+                        if (str_starts_with($value, 'data:')) {
+                            if (!preg_match('/^data:image\/(\w+);base64,/', $value)) {
+                                $fail('The ' . $attribute . ' must be a valid base64 image data URL.');
+                            }
+                        }
+                    } else {
+                        $fail('The ' . $attribute . ' must be an image file or a valid URL/string.');
+                    }
+                }
+            ],
         ]); 
 
          $inputterId = $request->input('inputter_id') ?? $request->input('user_id') ?? (Auth::user() ? Auth::user()->id : null);
@@ -107,6 +146,25 @@ class CmsArticleController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
+        // Preprocess stringified fields for form-data requests
+        if ($request->has('tags') && is_string($request->input('tags'))) {
+            $decoded = json_decode($request->input('tags'), true);
+            if (is_array($decoded)) {
+                $request->merge(['tags' => $decoded]);
+            }
+        }
+
+        if ($request->has('is_featured')) {
+            $isFeatured = $request->input('is_featured');
+            if (is_string($isFeatured)) {
+                if ($isFeatured === 'true') {
+                    $request->merge(['is_featured' => true]);
+                } elseif ($isFeatured === 'false') {
+                    $request->merge(['is_featured' => false]);
+                }
+            }
+        }
+
         $validated = $request->validate([
             'title' => 'sometimes|string|max:255',
             'content' => 'sometimes|string',
@@ -116,6 +174,26 @@ class CmsArticleController extends Controller
             'tags.*' => 'exists:tags,id',
             'is_featured' => 'nullable|boolean',
             'status' => 'nullable|string|in:draft,pending,published',
+            'featured_image' => [
+                'nullable',
+                function ($attribute, $value, $fail) {
+                    if ($value instanceof \Illuminate\Http\UploadedFile) {
+                        $rules = ['image', 'max:20480'];
+                        $validator = \Illuminate\Support\Facades\Validator::make([$attribute => $value], [$attribute => $rules]);
+                        if ($validator->fails()) {
+                            $fail($validator->errors()->first($attribute));
+                        }
+                    } elseif (is_string($value)) {
+                        if (str_starts_with($value, 'data:')) {
+                            if (!preg_match('/^data:image\/(\w+);base64,/', $value)) {
+                                $fail('The ' . $attribute . ' must be a valid base64 image data URL.');
+                            }
+                        }
+                    } else {
+                        $fail('The ' . $attribute . ' must be an image file or a valid URL/string.');
+                    }
+                }
+            ],
         ]);
 
         $updatedArticle = $this->articleService->updateArticle($article, $validated);

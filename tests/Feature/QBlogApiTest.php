@@ -256,6 +256,139 @@ class QBlogApiTest extends TestCase
             ]);
     }
 
+    public function test_create_and_update_article_with_featured_image()
+    {
+        $file = \Illuminate\Http\UploadedFile::fake()->image('featured.jpg');
+        $createdFiles = [];
+
+        // 1. Create Article with uploaded featured image
+        $response = $this->withHeaders([
+            'Authorization' => 'Basic ' . base64_encode('author@test.com:password')
+        ])->postJson('/api/v1/cms/articles', [
+            'title' => 'Article with Featured Image',
+            'content' => 'Sample content with image.',
+            'category_id' => $this->category->id,
+            'status' => 'draft',
+            'featured_image' => $file
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertNotNull($response->json('featured_image'));
+        
+        $featuredImagePath = $response->json('featured_image');
+        $filename = basename(parse_url($featuredImagePath, PHP_URL_PATH));
+        $this->assertFileExists(public_path('featured_image/' . $filename));
+        $createdFiles[] = public_path('featured_image/' . $filename);
+
+        $articleId = $response->json('id');
+
+        // 2. Update Article with a string URL
+        $response = $this->withHeaders([
+            'Authorization' => 'Basic ' . base64_encode('author@test.com:password')
+        ])->patchJson("/api/v1/cms/articles/{$articleId}", [
+            'featured_image' => 'https://example.com/other-image.jpg'
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonFragment([
+                'featured_image' => 'https://example.com/other-image.jpg'
+            ]);
+
+        // 3. Update Article with a new uploaded file
+        $newFile = \Illuminate\Http\UploadedFile::fake()->image('new-featured.jpg');
+        $response = $this->withHeaders([
+            'Authorization' => 'Basic ' . base64_encode('author@test.com:password')
+        ])->patchJson("/api/v1/cms/articles/{$articleId}", [
+            'featured_image' => $newFile
+        ]);
+
+        $response->assertStatus(200);
+        $newFeaturedImagePath = $response->json('featured_image');
+        $this->assertNotEquals($featuredImagePath, $newFeaturedImagePath);
+        
+        $newFilename = basename(parse_url($newFeaturedImagePath, PHP_URL_PATH));
+        $this->assertFileExists(public_path('featured_image/' . $newFilename));
+        $createdFiles[] = public_path('featured_image/' . $newFilename);
+
+        // Cleanup
+        foreach ($createdFiles as $filePath) {
+            if (file_exists($filePath)) {
+                @unlink($filePath);
+            }
+        }
+    }
+
+    public function test_create_and_update_article_with_base64_featured_image()
+    {
+        $base64Image = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        $createdFiles = [];
+
+        // 1. Create Article with base64 image
+        $response = $this->withHeaders([
+            'Authorization' => 'Basic ' . base64_encode('author@test.com:password')
+        ])->postJson('/api/v1/cms/articles', [
+            'title' => 'Article with Base64 Image',
+            'content' => 'Sample content.',
+            'category_id' => $this->category->id,
+            'status' => 'draft',
+            'featured_image' => $base64Image
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertNotNull($response->json('featured_image'));
+        
+        $featuredImagePath = $response->json('featured_image');
+        $this->assertStringContainsString('/featured_image/', $featuredImagePath);
+        
+        $filename = basename(parse_url($featuredImagePath, PHP_URL_PATH));
+        $this->assertFileExists(public_path('featured_image/' . $filename));
+        $createdFiles[] = public_path('featured_image/' . $filename);
+
+        $articleId = $response->json('id');
+
+        // 2. Update Article with a new base64 image
+        $newBase64Image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+        $response = $this->withHeaders([
+            'Authorization' => 'Basic ' . base64_encode('author@test.com:password')
+        ])->patchJson("/api/v1/cms/articles/{$articleId}", [
+            'featured_image' => $newBase64Image
+        ]);
+
+        $response->assertStatus(200);
+        $newFeaturedImagePath = $response->json('featured_image');
+        $this->assertNotEquals($featuredImagePath, $newFeaturedImagePath);
+        
+        $newFilename = basename(parse_url($newFeaturedImagePath, PHP_URL_PATH));
+        $this->assertFileExists(public_path('featured_image/' . $newFilename));
+        $createdFiles[] = public_path('featured_image/' . $newFilename);
+
+        // Cleanup
+        foreach ($createdFiles as $filePath) {
+            if (file_exists($filePath)) {
+                @unlink($filePath);
+            }
+        }
+    }
+
+    public function test_create_article_with_form_data_stringified_inputs()
+    {
+        $tag = Tag::create(['name' => 'News', 'slug' => 'news']);
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Basic ' . base64_encode('author@test.com:password')
+        ])->post('/api/v1/cms/articles', [
+            'title' => 'Article with Stringified Form Data',
+            'content' => 'Sample content.',
+            'category_id' => $this->category->id,
+            'status' => 'draft',
+            'tags' => '[' . $tag->id . ']',
+            'is_featured' => 'true'
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertTrue($response->json('is_featured'));
+    }
+
     public function test_cms_get_single_article_by_id()
     {
         $article = Article::create([

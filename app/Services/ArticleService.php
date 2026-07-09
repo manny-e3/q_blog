@@ -8,8 +8,16 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Str;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
+use App\Services\MediaService;
+
 class ArticleService
 {
+    protected $mediaService;
+
+    public function __construct(MediaService $mediaService)
+    {
+        $this->mediaService = $mediaService;
+    }
     /**
      * Get articles by status for admin.
      */
@@ -54,24 +62,26 @@ class ArticleService
         
         $userService = resolve(\App\Services\ExternalUserService::class);
         $user = $userService->getUserById($inputterId);
-        if ($user) {
-            $roleName = '';
-            if (isset($user['role'])) {
-                if (is_array($user['role'])) {
-                    $roleName = $user['role']['name'] ?? '';
-                } else {
-                    $roleName = $user['role'];
-                }
-            }
-            if (strcasecmp($roleName, 'Authoriser') === 0) {
-                $status = 'published'; // Authorisers publish directly by default
-            }
-        }
+        // if ($user) {
+        //     $roleName = '';
+        //     if (isset($user['role'])) {
+        //         if (is_array($user['role'])) {
+        //             $roleName = $user['role']['name'] ?? '';
+        //         } else {
+        //             $roleName = $user['role'];
+        //         }
+        //     }
+        //     if (strcasecmp($roleName, 'Authoriser') === 0) {
+        //         $status = 'published'; // Authorisers publish directly by default
+        //     }
+        // }
 
         // Allow explicit status override (e.g. saving as draft)
         if (isset($data['status'])) {
             $status = $data['status'];
         }
+
+        $this->processFeaturedImage($data);
 
         $article = Article::create([
             'title' => $data['title'],
@@ -80,6 +90,7 @@ class ArticleService
             'summary' => $data['summary'] ?? null,
             'status' => $status,
             'is_featured' => $data['is_featured'] ?? false,
+            'featured_image' => $data['featured_image'] ?? null,
             'inputter_id' => $inputterId,
             'authoriser_id' => $data['authoriser_id'] ?? null,
             'category_id' => $data['category_id'],
@@ -117,6 +128,8 @@ class ArticleService
             }
             $article->slug = $slug;
         }
+
+        $this->processFeaturedImage($data);
 
         $article->update($data);
 
@@ -434,5 +447,41 @@ class ArticleService
         }
 
         return $articles;
+    }
+
+    /**
+     * Process featured image if uploaded or as base64 string.
+     */
+    protected function processFeaturedImage(array &$data): void
+    {
+        if (!array_key_exists('featured_image', $data)) {
+            return;
+        }
+
+        $imageValue = $data['featured_image'];
+
+        if ($imageValue instanceof \Illuminate\Http\UploadedFile) {
+            $filename = time() . '_' . str_replace(' ', '_', $imageValue->getClientOriginalName());
+            
+            $destinationPath = public_path('featured_image');
+            if (!file_exists($destinationPath)) {
+                mkdir($destinationPath, 0755, true);
+            }
+            
+            $imageValue->move($destinationPath, $filename);
+            $data['featured_image'] = url('public/featured_image/' . $filename);
+        } elseif (is_string($imageValue) && preg_match('/^data:image\/(\w+);base64,(.*)$/s', $imageValue, $matches)) {
+            $extension = $matches[1];
+            $base64Data = base64_decode($matches[2]);
+            $filename = time() . '_' . uniqid() . '.' . $extension;
+            
+            $destinationPath = public_path('featured_image');
+            if (!file_exists($destinationPath)) {
+                mkdir($destinationPath, 0755, true);
+            }
+            
+            file_put_contents($destinationPath . '/' . $filename, $base64Data);
+            $data['featured_image'] = url('featured_image/' . $filename);
+        }
     }
 }

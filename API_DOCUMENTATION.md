@@ -178,17 +178,18 @@ Create a new article.
 
 **Request Body:**
 
-| Field           | Type    | Required | Description                                                         |
-|-----------------|---------|----------|---------------------------------------------------------------------|
-| `title`         | string  | Yes      | Article title (max 255 chars)                                       |
-| `content`       | string  | Yes      | Article body content                                                |
-| `summary`       | string  | No       | Short article summary                                               |
-| `category_id`   | integer | Yes      | Must exist in `categories` table                                    |
-| `tags`          | array   | No       | Array of tag IDs (each must exist in `tags` table)                  |
-| `is_featured`   | boolean | No       | Whether to feature the article (default: `false`)                   |
-| `inputter_id`   | integer | No       | ID of the article author; falls back to `user_id` or authenticated user |
-| `authoriser_id` | integer | No       | ID of the **specific authoriser** to be notified for approval       |
-| `status`        | string  | No       | `draft`, `pending`, or `published` (default: `pending`)             |
+| Field            | Type           | Required | Description                                                         |
+|------------------|----------------|----------|---------------------------------------------------------------------|
+| `title`          | string         | Yes      | Article title (max 255 chars)                                       |
+| `content`        | string         | Yes      | Article body content                                                |
+| `summary`        | string         | No       | Short article summary                                               |
+| `category_id`    | integer        | Yes      | Must exist in `categories` table                                    |
+| `tags`           | array          | No       | Array of tag IDs (each must exist in `tags` table)                  |
+| `is_featured`    | boolean        | No       | Whether to feature the article (default: `false`)                   |
+| `featured_image` | file or string | No       | Either an image file upload (max 20MB) or an existing image URL string |
+| `inputter_id`    | integer        | No       | ID of the article author; falls back to `user_id` or authenticated user |
+| `authoriser_id`  | integer        | No       | ID of the **specific authoriser** to be notified for approval       |
+| `status`         | string         | No       | `draft`, `pending`, or `published` (default: `pending`)             |
 
 **Business Rules:**
 - If the inputting user has an `Authoriser` role, the article defaults to `published` status.
@@ -223,15 +224,16 @@ Update an existing article. Only the article's inputter or an AUTHORISER may upd
 
 **Request Body (all fields optional):**
 
-| Field         | Type    | Description                              |
-|---------------|---------|------------------------------------------|
-| `title`       | string  | Article title (max 255 chars)            |
-| `content`     | string  | Article body content                     |
-| `summary`     | string  | Short article summary                    |
-| `category_id` | integer | Must exist in `categories` table         |
-| `tags`        | array   | Array of tag IDs                         |
-| `is_featured` | boolean | Featured flag                            |
-| `status`      | string  | `draft`, `pending`, or `published`       |
+| Field            | Type           | Description                                                             |
+|------------------|----------------|-------------------------------------------------------------------------|
+| `title`          | string         | Article title (max 255 chars)                                           |
+| `content`        | string         | Article body content                                                    |
+| `summary`        | string         | Short article summary                                                   |
+| `category_id`    | integer        | Must exist in `categories` table                                        |
+| `tags`           | array          | Array of tag IDs                                                        |
+| `is_featured`    | boolean        | Featured flag                                                           |
+| `featured_image` | file or string | Either an image file upload (max 20MB) or an existing image URL string    |
+| `status`         | string         | `draft`, `pending`, or `published`                                      |
 
 **Response `200`:** Updated article object.
 **Response `403`:** `{ "message": "Forbidden." }`
