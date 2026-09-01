@@ -31,9 +31,8 @@ class PublicArticleController extends Controller
     {
         $filters = $request->only(['category', 'author', 'tag']);
         $sort = $request->input('sort', 'latest');
-        $limit = $request->input('limit', 12);
 
-        $articles = $this->articleService->getPublicArticles($filters, $sort, $limit);
+        $articles = $this->articleService->getPublicArticles($filters, $sort);
 
         return response()->json($articles);
     }

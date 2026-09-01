@@ -57,6 +57,20 @@ class CmsArticleController extends Controller
             }
         }
 
+        if ($request->has('category_id')) {
+            $categoryId = $request->input('category_id');
+            if (is_string($categoryId)) {
+                $decoded = json_decode($categoryId, true);
+                if (is_array($decoded)) {
+                    $request->merge(['category_id' => $decoded]);
+                } elseif (is_numeric($categoryId)) {
+                    $request->merge(['category_id' => [(int)$categoryId]]);
+                }
+            } elseif (is_numeric($categoryId)) {
+                $request->merge(['category_id' => [(int)$categoryId]]);
+            }
+        }
+
         if ($request->has('is_featured')) {
             $isFeatured = $request->input('is_featured');
             if (is_string($isFeatured)) {
@@ -72,13 +86,14 @@ class CmsArticleController extends Controller
             'title' => 'required|string|max:255',
             'content' => 'required|string',
             'summary' => 'nullable|string',
-            'category_id' => 'required|exists:categories,id',
+            'category_id' => 'required|array',
+            'category_id.*' => 'exists:categories,id',
             'tags' => 'nullable|array',
             'tags.*' => 'exists:tags,id', 
             'is_featured' => 'nullable|boolean',
             'inputter_id' => 'nullable|integer',
             'authoriser_id' => 'nullable|integer',
-            'status' => 'nullable|string|in:draft,pending,published',
+            'status' => 'nullable|string|in:draft,pending,published,archived',
             'featured_image' => [
                 'nullable',
                 function ($attribute, $value, $fail) {
@@ -154,6 +169,20 @@ class CmsArticleController extends Controller
             }
         }
 
+        if ($request->has('category_id')) {
+            $categoryId = $request->input('category_id');
+            if (is_string($categoryId)) {
+                $decoded = json_decode($categoryId, true);
+                if (is_array($decoded)) {
+                    $request->merge(['category_id' => $decoded]);
+                } elseif (is_numeric($categoryId)) {
+                    $request->merge(['category_id' => [(int)$categoryId]]);
+                }
+            } elseif (is_numeric($categoryId)) {
+                $request->merge(['category_id' => [(int)$categoryId]]);
+            }
+        }
+
         if ($request->has('is_featured')) {
             $isFeatured = $request->input('is_featured');
             if (is_string($isFeatured)) {
@@ -169,11 +198,13 @@ class CmsArticleController extends Controller
             'title' => 'sometimes|string|max:255',
             'content' => 'sometimes|string',
             'summary' => 'nullable|string',
-            'category_id' => 'sometimes|exists:categories,id',
+            'category_id' => 'sometimes|array',
+            'category_id.*' => 'exists:categories,id',
             'tags' => 'nullable|array',
             'tags.*' => 'exists:tags,id',
             'is_featured' => 'nullable|boolean',
-            'status' => 'nullable|string|in:draft,pending,published',
+            'authoriser_id' => 'nullable|integer',
+            'status' => 'nullable|string|in:draft,pending,published,archived',
             'featured_image' => [
                 'nullable',
                 function ($attribute, $value, $fail) {
@@ -186,7 +217,7 @@ class CmsArticleController extends Controller
                     } elseif (is_string($value)) {
                         if (str_starts_with($value, 'data:')) {
                             if (!preg_match('/^data:image\/(\w+);base64,/', $value)) {
-                                $fail('The ' . $attribute . ' must be a valid base64 image data URL.');
+                                  $fail('The ' . $attribute . ' must be a valid base64 image data URL.');
                             }
                         }
                     } else {
@@ -196,7 +227,15 @@ class CmsArticleController extends Controller
             ],
         ]);
 
-        $updatedArticle = $this->articleService->updateArticle($article, $validated);
+        if (!empty($validated['authoriser_id'])) {
+            $userService = resolve(\App\Services\ExternalUserService::class);
+            $authoriser = $userService->getUserById((int)$validated['authoriser_id']);
+            if (!$authoriser) {
+                return response()->json(['message' => 'Invalid Authoriser ID.'], 400);
+            }
+        }
+
+        $updatedArticle = $this->articleService->updateArticle($article, $validated, $user);
 
         return response()->json($updatedArticle);
     }

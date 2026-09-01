@@ -53,11 +53,11 @@ class DatabaseSeeder extends Seeder
             'is_featured' => true,
             'inputter_id' => $authorId,
             'authoriser_id' => $adminId,
-            'category_id' => $bonds->id,
             'views_count' => 120,
             'shares_count' => 15,
+            'category_ids' => [$bonds->id],
+            'tag_ids' => [$tagBonds->id, $tagNigeria->id],
         ]);
-        $article1->tags()->attach([$tagBonds->id, $tagNigeria->id]);
 
         // Published Sustainability article
         $article2 = \App\Models\Article::create([
@@ -69,11 +69,11 @@ class DatabaseSeeder extends Seeder
             'is_featured' => false,
             'inputter_id' => $authorId,
             'authoriser_id' => $adminId,
-            'category_id' => $sustainability->id,
             'views_count' => 85,
             'shares_count' => 22,
+            'category_ids' => [$sustainability->id],
+            'tag_ids' => [$tagBonds->id, $tagGreen->id],
         ]);
-        $article2->tags()->attach([$tagBonds->id, $tagGreen->id]);
 
         // Draft
         $article3 = \App\Models\Article::create([
@@ -84,7 +84,7 @@ class DatabaseSeeder extends Seeder
             'status' => 'draft',
             'is_featured' => false,
             'inputter_id' => $authorId,
-            'category_id' => $finance->id,
+            'category_ids' => [$finance->id],
         ]);
 
         // Pending
@@ -96,7 +96,7 @@ class DatabaseSeeder extends Seeder
             'status' => 'pending',
             'is_featured' => false,
             'inputter_id' => $authorId,
-            'category_id' => $finance->id,
+            'category_ids' => [$finance->id],
         ]);
     }
 }

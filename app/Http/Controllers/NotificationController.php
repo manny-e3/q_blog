@@ -16,12 +16,21 @@ class NotificationController extends Controller
     }
 
     /**
-     * Get all notifications for authenticated user.
+     * Get all notifications globally.
      */
     public function index()
     {
-        $user = Auth::user();
-        $notifications = $this->notificationService->getNotificationsForUser($user);
+        $notifications = $this->notificationService->getAllNotifications();
+
+        return response()->json($notifications);
+    }
+
+    /**
+     * Get all notifications for a specific user ID.
+     */
+    public function getByUserId($userId)
+    {
+        $notifications = $this->notificationService->getNotificationsByUserId((int) $userId);
 
         return response()->json($notifications);
     }
@@ -57,5 +66,41 @@ class NotificationController extends Controller
         return response()->json([
             'message' => 'All notifications marked as read.'
         ]);
+    }
+
+    /**
+     * Store/Send a manual notification.
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|integer',
+            'title' => 'required|string|max:255',
+            'message' => 'required|string',
+        ]);
+
+        $userService = resolve(\App\Services\ExternalUserService::class);
+        $user = $userService->getUserById((int)$validated['user_id']);
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        $email = $user['email'] ?? null;
+        if (!$email) {
+            return response()->json(['message' => 'User email not found.'], 400);
+        }
+
+        $notification = $this->notificationService->sendNotification(
+            (int)$validated['user_id'],
+            $email,
+            $validated['title'],
+            $validated['message']
+        );
+
+        return response()->json([
+            'message' => 'Notification created successfully.',
+            'notification' => $notification
+        ], 201);
     }
 }

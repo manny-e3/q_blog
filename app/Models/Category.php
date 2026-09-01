@@ -16,8 +16,8 @@ class Category extends Model
         'deactivation_reason',
     ];
 
-    public function articles()
+    public function getArticlesAttribute()
     {
-        return $this->hasMany(Article::class);
+        return Article::whereJsonContains('category_ids', $this->id)->get();
     }
 }

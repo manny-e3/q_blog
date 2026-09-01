@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title }}</title>
+    <title>Welcome to the Q-BLOGS Newsletter</title>
     <style>
         /* Reset styles for email clients */
         body, table, td, a {
@@ -62,17 +62,17 @@
         }
         .brand-header {
             margin-bottom: 32px;
-            display: flex;
-            align-items: center;
+            display: table;
+            width: 100%;
         }
         .brand-logo {
             font-size: 22px;
             font-weight: 800;
             letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #0d9488 0%, #6366f1 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            color: #0d9488;
+            color: #0f172a;
+        }
+        .brand-logo-accent {
+            color: #6366f1;
         }
         .brand-tag {
             font-size: 11px;
@@ -80,10 +80,12 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             color: #64748b;
-            margin-left: 8px;
-            padding: 2px 6px;
+            padding: 2px 8px;
             background-color: #f1f5f9;
-            border-radius: 4px;
+            border-radius: 6px;
+            display: inline-block;
+            margin-left: 8px;
+            vertical-align: middle;
         }
         .email-title {
             font-size: 24px;
@@ -99,30 +101,46 @@
             color: #334155;
             margin-bottom: 32px;
         }
+        
+        /* Details Card */
         .detail-card {
             background-color: #f8fafc;
             border: 1px solid #e2e8f0;
             border-radius: 12px;
-            padding: 20px;
+            padding: 24px;
             margin-bottom: 32px;
         }
-        .detail-item {
-            margin-bottom: 12px;
+        .detail-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 0;
+            margin-bottom: 16px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+        .detail-table {
+            width: 100%;
+        }
+        .detail-row td {
+            padding: 8px 0;
             font-size: 14px;
             line-height: 1.5;
-        }
-        .detail-item:last-child {
-            margin-bottom: 0;
+            vertical-align: top;
         }
         .detail-label {
             font-weight: 600;
-            color: #475569;
-            display: inline-block;
-            width: 120px;
+            color: #64748b;
+            width: 150px;
         }
         .detail-value {
             color: #0f172a;
+            font-weight: 500;
         }
+        
+        /* CTA Button */
         .btn-container {
             text-align: center;
             margin-bottom: 16px;
@@ -130,15 +148,15 @@
         .btn-action {
             display: inline-block;
             padding: 14px 32px;
-            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
             color: #ffffff !important;
             font-size: 15px;
             font-weight: 600;
             text-decoration: none !important;
             border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
-            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25);
         }
+        
         .footer-padding {
             padding: 24px 48px 40px 48px;
             text-align: center;
@@ -171,20 +189,64 @@
             <tr>
                 <td class="content-padding">
                     <!-- Brand Identity -->
-                  
+                    <div class="brand-header">
+                       <span class="brand-logo">Q-BLOGS</span>
+                        <span class="brand-tag">Newsletter</span>
+                    </div>
 
                     <!-- Email Heading -->
-                    <h2 class="email-title">{{ $title }}</h2>
+                    <h2 class="email-title">Welcome to the Q-BLOGS Newsletter!</h2>
 
-                    <!-- Email Body Paragraphs -->
+                    <!-- Email Body Salutation -->
                     <div class="email-body">
-                        {!! nl2br(e($bodyMessage)) !!}
+                        <p>Hello {{ $subscription->first_name }},</p>
+                        <p>Thank you for subscribing to our newsletter! You've successfully joined our community. From now on, you'll receive the latest market insights, thought leadership articles, policy & regulatory updates, and trend analyses directly in your inbox.</p>
+                        <!-- <p>Here are the subscription preferences you selected:</p> -->
                     </div>
+
+                    <!-- Details Card -->
+                    <!-- <div class="detail-card">
+                        <h3 class="detail-title">Subscription Details</h3>
+                        <table class="detail-table" cellpadding="0" cellspacing="0" border="0">
+                            <tr class="detail-row">
+                                <td class="detail-label">Name:</td>
+                                <td class="detail-value">{{ $subscription->first_name }} {{ $subscription->last_name }}</td>
+                            </tr>
+                            <tr class="detail-row">
+                                <td class="detail-label">Email:</td>
+                                <td class="detail-value">{{ $subscription->email }}</td>
+                            </tr>
+                            @if(!empty($subscription->organisation))
+                            <tr class="detail-row">
+                                <td class="detail-label">Organisation:</td>
+                                <td class="detail-value">{{ $subscription->organisation }}</td>
+                            </tr>
+                            @endif
+                            @if(!empty($subscription->role))
+                            <tr class="detail-row">
+                                <td class="detail-label">Role:</td>
+                                <td class="detail-value">{{ $subscription->role }}</td>
+                            </tr>
+                            @endif
+                            @if(!empty($subscription->topics))
+                            <tr class="detail-row">
+                                <td class="detail-label">Selected Topics:</td>
+                                <td class="detail-value">
+                                    {{ is_array($subscription->topics) ? implode(', ', $subscription->topics) : $subscription->topics }}
+                                </td>
+                            </tr>
+                            @endif
+                            <tr class="detail-row">
+                                <td class="detail-label">Frequency:</td>
+                                <td class="detail-value">{{ $subscription->frequency }}</td>
+                            </tr>
+                        </table>
+                    </div> -->
 
                     <!-- Call To Action -->
                     <div class="btn-container">
-                        <a href="https://adgnode.fmdqgroup.com/q-blog/login" class="btn-action" style="color: #fdcd30ff !important" target="_blank">
-                           Login 
+                        <a href="https://adgnode.fmdqgroup.com/q-blog" class="btn-action" target="_blank">
+                           Explore Q-BLOGS
                         </a>
                     </div>
                 </td>
@@ -192,21 +254,19 @@
             <tr>
                 <td style="border-top: 1px solid #f1f5f9; height: 1px; line-height: 1px; font-size: 1px;"></td>
             </tr>
-            <!-- <tr>
+            <tr>
                 <td class="footer-padding">
                     <p class="footer-text">
-                        This is an automated operational notification from the Q-BLOG Admin Portal. Please do not reply directly to this email.
+                        You are receiving this email because you subscribed to the Q-BLOGS newsletter.
                     </p>
                     <p class="footer-text" style="margin-top: 8px;">
-                        &copy; 2026 Q-BLOG. All rights reserved.
+                        &copy; {{ date('Y') }} Q-BLOGS. All rights reserved.
                     </p>
                     <div class="footer-links">
-                        <a href="{{ url('/api/v1/docs') }}" class="footer-link" target="_blank">API Reference</a>
-                        <span style="color: #cbd5e1;">&bull;</span>
-                        <a href="{{ url('/api/v1/health') }}" class="footer-link" target="_blank">System Health</a>
+                        <a href="{{ $unsubscribeUrl }}" class="footer-link">Unsubscribe</a>
                     </div>
                 </td>
-            </tr> -->
+            </tr>
         </table>
     </div>
 </body>

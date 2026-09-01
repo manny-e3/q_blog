@@ -25,10 +25,15 @@ class NewsletterController extends Controller
             'first_name' => 'sometimes|string|max:100',
             'lastName' => 'sometimes|string|max:100',
             'last_name' => 'sometimes|string|max:100',
-            'email' => 'required|email|unique:newsletter_subscriptions,email',
+            'email' => 'required|email',
             'consent' => 'required|boolean',
             'captchaToken' => 'nullable|string',
             'captcha_token' => 'nullable|string',
+            'organisation' => 'nullable|string|max:150',
+            'role' => 'nullable|string|max:100',
+            'topics' => 'nullable|array',
+            'topics.*' => 'string|in:Sustainability,Market & Economy,Innovation & Trends,Thought Leadership,Investor Education,Risk & Compliance,Product Updates,Policy & Regulations',
+            'frequency' => 'nullable|string|in:As Published,Weekly Digest,Monthly Highlights',
         ]);
 
         $subscription = $this->newsletterService->subscribe($validated);
@@ -95,5 +100,26 @@ class NewsletterController extends Controller
         $subscribers = $this->newsletterService->getSubscribers((int)$limit);
 
         return response()->json($subscribers);
+    }
+
+    /**
+     * Unsubscribe from the newsletter.
+     */
+    public function unsubscribe(Request $request)
+    {
+        $email = $request->query('email');
+        if (!$email) {
+            abort(400, 'Invalid request.');
+        }
+
+        // Update status to 'unsubscribed' instead of deleting
+        $subscription = \App\Models\NewsletterSubscription::where('email', $email)->first();
+        if ($subscription) {
+            $subscription->update([
+                'status' => 'unsubscribed'
+            ]);
+        }
+
+        return view('emails.unsubscribed', ['email' => $email]);
     }
 }

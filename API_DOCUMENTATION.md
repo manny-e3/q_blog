@@ -20,6 +20,7 @@
 11. [Analytics](#11-analytics)
 12. [Newsletter](#12-newsletter)
 13. [System Utilities](#13-system-utilities)
+14. [Authors](#14-authors)
 
 ---
 
@@ -183,7 +184,7 @@ Create a new article.
 | `title`          | string         | Yes      | Article title (max 255 chars)                                       |
 | `content`        | string         | Yes      | Article body content                                                |
 | `summary`        | string         | No       | Short article summary                                               |
-| `category_id`    | integer        | Yes      | Must exist in `categories` table                                    |
+| `category_id`    | array          | Yes      | Array of category IDs (each must exist in `categories` table)       |
 | `tags`           | array          | No       | Array of tag IDs (each must exist in `tags` table)                  |
 | `is_featured`    | boolean        | No       | Whether to feature the article (default: `false`)                   |
 | `featured_image` | file or string | No       | Either an image file upload (max 20MB) or an existing image URL string |
@@ -222,6 +223,9 @@ Retrieve details of a single article by ID for editing. Only the article's input
 ### PATCH `/cms/articles/{id}` 🔒
 Update an existing article. Only the article's inputter or an AUTHORISER may update.
 
+> [!NOTE]
+> For **INPUTTERs**, updates do not modify the active content immediately; instead, they are held in a `pending_changes` JSON column and the article status is changed to `pending` (removing it from the public feed) until approved by an AUTHORISER. For **AUTHORISERs**, updates modify the active content directly and immediately.
+
 **Request Body (all fields optional):**
 
 | Field            | Type           | Description                                                             |
@@ -229,13 +233,14 @@ Update an existing article. Only the article's inputter or an AUTHORISER may upd
 | `title`          | string         | Article title (max 255 chars)                                           |
 | `content`        | string         | Article body content                                                    |
 | `summary`        | string         | Short article summary                                                   |
-| `category_id`    | integer        | Must exist in `categories` table                                        |
+| `category_id`    | array          | Array of category IDs (each must exist in `categories` table)       |
 | `tags`           | array          | Array of tag IDs                                                        |
 | `is_featured`    | boolean        | Featured flag                                                           |
 | `featured_image` | file or string | Either an image file upload (max 20MB) or an existing image URL string    |
+| `authoriser_id`  | integer        | Assigned authoriser's user ID                                           |
 | `status`         | string         | `draft`, `pending`, or `published`                                      |
 
-**Response `200`:** Updated article object.
+**Response `200`:** Updated article object (including `pending_changes` array for INPUTTERs).
 **Response `403`:** `{ "message": "Forbidden." }`
 **Response `404`:** `{ "message": "Article not found." }`
 
@@ -332,6 +337,7 @@ All endpoints require **authentication** 🔒. Returns articles across all autho
 
 | Method | Endpoint                              | Description                      |
 |--------|---------------------------------------|----------------------------------|
+| GET    | `/cms/admin/articles/all`             | All articles across all statuses |
 | GET    | `/cms/admin/articles/published`       | All published articles           |
 | GET    | `/cms/admin/articles/unpublished`     | All unpublished (draft) articles |
 | GET    | `/cms/admin/articles/pending`         | All pending articles             |
@@ -409,14 +415,38 @@ Return the count of articles currently awaiting approval.
 ### GET `/categories`
 List all active categories. (Public)
 
-**Response `200`:** Array of category objects.
+**Response `200`:**
+```json
+[
+  {
+    "id": 1,
+    "name": "Market Review",
+    "slug": "market-review",
+    "status": "active",
+    "deactivation_reason": null,
+    "created_at": "2026-06-16T12:00:00.000000Z",
+    "updated_at": "2026-06-16T12:05:00.000000Z"
+  }
+]
+```
 
 ---
 
 ### GET `/categories/{id}`
 Get a single category by ID. (Public)
 
-**Response `200`:** Category object.
+**Response `200`:**
+```json
+{
+  "id": 1,
+  "name": "Market Review",
+  "slug": "market-review",
+  "status": "active",
+  "deactivation_reason": null,
+  "created_at": "2026-06-16T12:00:00.000000Z",
+  "updated_at": "2026-06-16T12:05:00.000000Z"
+}
+```
 **Response `404`:** `{ "message": "Category not found." }`
 
 ---
@@ -426,33 +456,88 @@ Create a new category.
 
 **Request Body:**
 
-| Field         | Type   | Required | Description          |
-|---------------|--------|----------|----------------------|
-| `name`        | string | Yes      | Category name        |
-| `description` | string | No       | Category description |
+| Field  | Type   | Required | Description   |
+|--------|--------|----------|---------------|
+| `name` | string | Yes      | Category name |
 
-**Response `201`:** Created category object.
+**Response `201`:**
+```json
+{
+  "id": 2,
+  "name": "Technology",
+  "slug": "technology",
+  "status": "active",
+  "deactivation_reason": null,
+  "created_at": "2026-07-14T12:00:00.000000Z",
+  "updated_at": "2026-07-14T12:00:00.000000Z"
+}
+```
 
 ---
 
 ### PATCH `/categories/{id}` 🔒
 Update an existing category.
 
-**Response `200`:** Updated category object.
+**Request Body (all fields optional):**
+
+| Field    | Type   | Description                                  |
+|----------|--------|----------------------------------------------|
+| `name`   | string | New category name                            |
+| `status` | string | Category status (enum: `active`, `inactive`) |
+
+**Response `200`:**
+```json
+{
+  "id": 2,
+  "name": "Tech & Innovation",
+  "slug": "tech-innovation",
+  "status": "active",
+  "deactivation_reason": null,
+  "created_at": "2026-07-14T12:00:00.000000Z",
+  "updated_at": "2026-07-14T12:10:00.000000Z"
+}
+```
+**Response `404`:** `{ "message": "Category not found." }`
 
 ---
 
 ### PATCH `/categories/{id}/deactivate` 🔒
 Deactivate a category.
 
-**Response `200`:** `{ "message": "Category deactivated." }`
+**Request Body:**
+
+| Field    | Type   | Required | Description                       |
+|----------|--------|----------|-----------------------------------|
+| `reason` | string | Yes      | Reason for category deactivation  |
+
+**Response `200`:**
+```json
+{
+  "message": "Category deactivated successfully.",
+  "category": {
+    "id": 2,
+    "name": "Tech & Innovation",
+    "slug": "tech-innovation",
+    "status": "inactive",
+    "deactivation_reason": "Category no longer relevant.",
+    "created_at": "2026-07-14T12:00:00.000000Z",
+    "updated_at": "2026-07-14T12:15:00.000000Z"
+  }
+}
+```
+**Response `404`:** `{ "message": "Category not found." }`
 
 ---
 
 ### DELETE `/categories/{id}` 🔒
 Delete an existing category.
 
-**Response `200`:** `{ "message": "Category deleted successfully." }`
+**Response `200`:**
+```json
+{
+  "message": "Category deleted successfully."
+}
+```
 **Response `404`:** `{ "message": "Category not found." }`
 
 ---
@@ -546,9 +631,52 @@ All endpoints require **authentication** 🔒.
 ---
 
 ### GET `/notifications` 🔒
-Retrieve all notifications for the authenticated user.
+Retrieve all notifications in the system globally.
 
 **Response `200`:** Array of notification objects.
+
+---
+
+### GET `/notifications/user/{userId}` 🔒
+Retrieve all notifications for a specific user ID.
+
+**Response `200`:** Array of notification objects.
+
+---
+
+### POST `/notifications` 🔒
+Create and send a manual notification to a specific user.
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `user_id` | integer | Yes | The ID of the recipient user. |
+| `title` | string | Yes | The title of the notification (max: 255 characters). |
+| `message` | string | Yes | The body message of the notification. |
+
+**Response `201`:**
+```json
+{
+  "message": "Notification created successfully.",
+  "notification": {
+    "id": 1,
+    "user_id": 2,
+    "title": "Manual Alert",
+    "message": "This is a test notification.",
+    "read_at": null,
+    "created_at": "2026-07-29T10:00:00.000000Z",
+    "updated_at": "2026-07-29T10:00:00.000000Z"
+  }
+}
+```
+
+**Response `404`:**
+```json
+{
+  "message": "User not found."
+}
+```
 
 ---
 
@@ -592,11 +720,40 @@ Subscribe an email address to the newsletter.
 
 **Request Body:**
 
-| Field   | Type   | Required | Description          |
-|---------|--------|----------|----------------------|
-| `email` | string | Yes      | Email to subscribe   |
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `firstName` / `first_name` | string | No | First name of the subscriber (max: 100 characters). |
+| `lastName` / `last_name` | string | No | Last name of the subscriber (max: 100 characters). |
+| `email` | string | Yes | Unique email address to subscribe. |
+| `consent` | boolean | Yes | Explicit consent to receive newsletter updates. |
+| `captchaToken` / `captcha_token` | string | No | Optional CAPTCHA token for verification. |
+| `organisation` | string | No | Subscriber's firm/institution (max: 150 characters). |
+| `role` | string | No | Subscriber's job role (max: 100 characters). |
+| `topics` | array | No | List of topics of interest. Allowed values: `Sustainability`, `Market & Economy`, `Innovation & Trends`, `Thought Leadership`, `Investor Education`, `Risk & Compliance`, `Product Updates`, `Policy & Regulations`. |
+| `frequency` | string | No | Email updates frequency. Allowed values: `As Published`, `Weekly Digest`, `Monthly Highlights` (default: `As Published`). |
 
-**Response `200`:** `{ "message": "Subscribed successfully." }`
+**Response `201`:**
+```json
+{
+  "message": "Successfully subscribed to the Q-BLOG newsletter.",
+  "subscription": {
+    "id": 1,
+    "first_name": "John",
+    "last_name": "Doe",
+    "email": "subscriber@example.com",
+    "consent_given": true,
+    "organisation": "FMDQ Group",
+    "role": "Analyst",
+    "topics": [
+      "Sustainability",
+      "Market & Economy"
+    ],
+    "frequency": "Weekly Digest",
+    "created_at": "2026-07-20T11:44:16.000000Z",
+    "updated_at": "2026-07-20T11:44:16.000000Z"
+  }
+}
+```
 
 ---
 
@@ -605,11 +762,17 @@ Verify a CAPTCHA token before newsletter subscription.
 
 **Request Body:**
 
-| Field   | Type   | Required | Description      |
-|---------|--------|----------|------------------|
-| `token` | string | Yes      | CAPTCHA token    |
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `captchaToken` / `captcha_token` | string | No | The CAPTCHA token to verify. |
 
-**Response `200`:** `{ "success": true }`
+**Response `200`:**
+```json
+{
+  "success": true,
+  "message": "CAPTCHA verification successful."
+}
+```
 
 ---
 
@@ -618,25 +781,94 @@ Check whether an email is already subscribed.
 
 **Query Parameters:**
 
-| Parameter | Type   | Description     |
-|-----------|--------|-----------------|
-| `email`   | string | Email to check  |
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `email` | string | Yes | Email to check subscription status. |
 
-**Response `200`:** `{ "subscribed": true }`
+**Response `200`:**
+```json
+{
+  "email": "subscriber@example.com",
+  "is_subscribed": true
+}
+```
 
 ---
 
 ### POST `/newsletter/sync` 🔒
-Sync newsletter subscriptions with an external mailing service.
+Sync newsletter subscriptions with the FMDQ Newsletter Platform.
 
-**Response `200`:** `{ "message": "Sync completed." }`
+**Response `200`:**
+```json
+{
+  "success": true,
+  "message": "Successfully synced 12 subscribers to the FMDQ Newsletter Platform.",
+  "synced_count": 12
+}
+```
 
 ---
 
 ### GET `/cms/subscribers` 🔒
 Retrieve a paginated list of newsletter subscribers.
 
-**Response `200`:** Paginated subscribers structure.
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `limit` | integer | No | Items per page (default: 15). |
+
+**Response `200`:**
+```json
+{
+  "current_page": 1,
+  "data": [
+    {
+      "id": 1,
+      "first_name": "John",
+      "last_name": "Doe",
+      "email": "subscriber@example.com",
+      "consent_given": true,
+      "organisation": "FMDQ Group",
+      "role": "Analyst",
+      "topics": [
+        "Sustainability",
+        "Market & Economy"
+      ],
+      "frequency": "Weekly Digest",
+      "created_at": "2026-07-20T11:44:16.000000Z",
+      "updated_at": "2026-07-20T11:44:16.000000Z"
+    }
+  ],
+  "first_page_url": "http://localhost/api/v1/cms/subscribers?page=1",
+  "from": 1,
+  "last_page": 1,
+  "last_page_url": "http://localhost/api/v1/cms/subscribers?page=1",
+  "links": [
+    {
+      "url": null,
+      "label": "&laquo; Previous",
+      "active": false
+    },
+    {
+      "url": "http://localhost/api/v1/cms/subscribers?page=1",
+      "label": "1",
+      "active": true
+    },
+    {
+      "url": null,
+      "label": "Next &raquo;",
+      "active": false
+    }
+  ],
+  "next_page_url": null,
+  "path": "http://localhost/api/v1/cms/subscribers",
+  "per_page": 15,
+  "prev_page_url": null,
+  "to": 1,
+  "total": 1
+}
+```
 
 ---
 
@@ -688,6 +920,123 @@ Health check endpoint.
   "timestamp": "2026-07-05T14:00:00Z"
 }
 ```
+
+---
+
+## 14. Authors
+
+### GET `/authors`
+Retrieve a list of all authors.
+
+**Response `200`:**
+```json
+[
+  {
+    "id": 534,
+    "name": "Faith Admin",
+    "email": "faith.idebi@fmdqgroup.com",
+    "title": "Head of Market Infrastructure",
+    "bio": "Mr. Afolabi is the Head, Market Architecture Division...",
+    "expertise": [
+      "Fixed Income Markets",
+      "Yield Analysis",
+      "Monetary Policy"
+    ],
+    "linkedin_url": "https://www.linkedin.com/in/faith-admin",
+    "twitter_url": "https://twitter.com/faith_admin",
+    "facebook_url": "https://facebook.com/faith_admin",
+    "instagram_url": "https://instagram.com/faith_admin",
+    "website_url": "https://faithadmin.com",
+    "created_at": "2026-07-20T12:55:30.000000Z",
+    "updated_at": "2026-07-20T12:55:30.000000Z"
+  }
+]
+```
+
+---
+
+### GET `/authors/email`
+Retrieve a single author by their email address.
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `email` | string | Yes | The email address of the author. |
+
+**Response `200`:**
+```json
+{
+  "id": 534,
+  "name": "Faith Admin",
+  "email": "faith.idebi@fmdqgroup.com",
+  "title": "Head of Market Infrastructure",
+  "bio": "Mr. Afolabi is the Head, Market Architecture Division...",
+  "expertise": [
+    "Fixed Income Markets",
+    "Yield Analysis",
+    "Monetary Policy"
+  ],
+  "linkedin_url": "https://www.linkedin.com/in/faith-admin",
+  "twitter_url": "https://twitter.com/faith_admin",
+  "facebook_url": "https://facebook.com/faith_admin",
+  "instagram_url": "https://instagram.com/faith_admin",
+  "website_url": "https://faithadmin.com",
+  "created_at": "2026-07-20T12:55:30.000000Z",
+  "updated_at": "2026-07-20T12:55:30.000000Z"
+}
+```
+
+---
+
+### POST `/authors` 🔒
+Create a new author profile.
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `id` | integer | No | Optional custom unique ID. |
+| `name` | string | Yes | Full name of the author. |
+| `email` | string | Yes | Unique email address. |
+| `title` | string | No | Job title / designation. |
+| `bio` | string | No | Professional biography. |
+| `expertise` | array | No | List of key areas of expertise. |
+| `linkedin_url` | string | No | LinkedIn profile URL. |
+| `twitter_url` | string | No | Twitter/X profile URL. |
+| `facebook_url` | string | No | Facebook profile URL. |
+| `instagram_url` | string | No | Instagram profile URL. |
+| `website_url` | string | No | Personal or portfolio website URL. |
+
+**Response `201`:**
+```json
+{
+  "id": 534,
+  "name": "Faith Admin",
+  "email": "faith.idebi@fmdqgroup.com",
+  "title": "Head of Market Infrastructure",
+  "bio": "Mr. Afolabi is the Head, Market Architecture Division...",
+  "expertise": [
+    "Fixed Income Markets",
+    "Yield Analysis",
+    "Monetary Policy"
+  ],
+  "linkedin_url": "https://www.linkedin.com/in/faith-admin",
+  "twitter_url": "https://twitter.com/faith_admin",
+  "facebook_url": "https://facebook.com/faith_admin",
+  "instagram_url": "https://instagram.com/faith_admin",
+  "website_url": "https://faithadmin.com",
+  "created_at": "2026-07-20T12:55:30.000000Z",
+  "updated_at": "2026-07-20T12:55:30.000000Z"
+}
+```
+
+---
+
+### PATCH `/authors/{id}` 🔒
+Update an existing author profile.
+
+**Response `200`:** Updated author JSON structure.
 
 ---
 

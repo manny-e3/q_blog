@@ -46,23 +46,57 @@ class BasicAuth
             $envPassword = env('APP_API_PASSWORD');
             
             if ($envUsername && $envPassword && $email === $envUsername && $password === $envPassword) {
-                $externalUser = [
-                    'id' => 999,
-                    'firstname' => 'System',
-                    'lastname' => 'Integrator',
-                    'email' => 'integrator@test.com',
-                    'role' => 'AUTHORISER',
-                    'status' => 'active'
-                ];
+                $payloadUserId = $request->input('inputter_id') ?: $request->input('user_id');
+                if (!$payloadUserId) {
+                    if (preg_match('/cms\/articles\/(\d+)/', $request->path(), $matches)) {
+                        $art = \App\Models\Article::find($matches[1]);
+                        if ($art) {
+                            $payloadUserId = $art->inputter_id;
+                        }
+                    }
+                }
+                if ($payloadUserId) {
+                    $extUser = $externalUserService->getUserById((int)$payloadUserId);
+                    if ($extUser) {
+                        $externalUser = $extUser;
+                    }
+                }
+                if (!$externalUser) {
+                    $externalUser = [
+                        'id' => 999,
+                        'firstname' => 'System',
+                        'lastname' => 'Integrator',
+                        'email' => 'integrator@test.com',
+                        'role' => 'AUTHORISER',
+                        'status' => 'active'
+                    ];
+                }
             } elseif ($email === 'fmdq_admin' && ($password === 'golddoor2025_secure!' || $password === 'iAuth@Secure(2026)!')) {
-                $externalUser = [
-                    'id' => 999,
-                    'firstname' => 'FMDQ',
-                    'lastname' => 'Admin',
-                    'email' => 'admin@fmdqgroup.com',
-                    'role' => 'AUTHORISER',
-                    'status' => 'active'
-                ];
+                $payloadUserId = $request->input('inputter_id') ?: $request->input('user_id');
+                if (!$payloadUserId) {
+                    if (preg_match('/cms\/articles\/(\d+)/', $request->path(), $matches)) {
+                        $art = \App\Models\Article::find($matches[1]);
+                        if ($art) {
+                            $payloadUserId = $art->inputter_id;
+                        }
+                    }
+                }
+                if ($payloadUserId) {
+                    $extUser = $externalUserService->getUserById((int)$payloadUserId);
+                    if ($extUser) {
+                        $externalUser = $extUser;
+                    }
+                }
+                if (!$externalUser) {
+                    $externalUser = [
+                        'id' => 999,
+                        'firstname' => 'FMDQ',
+                        'lastname' => 'Admin',
+                        'email' => 'admin@fmdqgroup.com',
+                        'role' => 'AUTHORISER',
+                        'status' => 'active'
+                    ];
+                }
             } elseif (app()->environment('local', 'testing')) {
                 if ($email === 'author@test.com' && $password === 'password') {
                     $externalUser = [
@@ -135,16 +169,30 @@ class BasicAuth
 
                 $role = 'INPUTTER';
                 if (isset($externalUser['role'])) {
-                    $extRole = strtoupper($externalUser['role']);
-                    if (in_array($extRole, ['AUTHORISER', 'ADMIN', 'AUTHORIZER'])) {
+                    $extRole = '';
+                    $roleId = null;
+                    if (is_array($externalUser['role'])) {
+                        $extRole = $externalUser['role']['name'] ?? '';
+                        $roleId = $externalUser['role']['id'] ?? null;
+                    } else {
+                        $extRole = $externalUser['role'];
+                        $roleId = $externalUser['role'];
+                    }
+                    
+                    $roleIdAttr = $externalUser['role_id'] ?? null;
+                    $extRoleUpper = strtoupper($extRole);
+                    
+                    if ($roleId == 67 || $roleIdAttr == 67 || in_array($extRoleUpper, ['AUTHORISER', 'ADMIN', 'AUTHORIZER']) || str_contains($extRoleUpper, 'ADMIN') || str_contains($extRoleUpper, 'AUTHORIS') || str_contains($extRoleUpper, 'AUTHORIZ')) {
                         $role = 'AUTHORISER';
                     }
                 }
 
+                $resolvedEmail = $externalUser['email'] ?? $email;
+
                 $userObj = new \Illuminate\Auth\GenericUser([
                     'id' => $externalId,
                     'name' => $name,
-                    'email' => $email,
+                    'email' => $resolvedEmail,
                     'role' => $role,
                     'status' => 'active'
                 ]);
@@ -153,7 +201,7 @@ class BasicAuth
                 \Illuminate\Support\Facades\Cache::put($cacheKey, json_encode([
                     'id' => $externalId,
                     'name' => $name,
-                    'email' => $email,
+                    'email' => $resolvedEmail,
                     'role' => $role,
                     'status' => 'active'
                 ]), 300);

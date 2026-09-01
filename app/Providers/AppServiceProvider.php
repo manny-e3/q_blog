@@ -19,6 +19,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        \Illuminate\Support\Facades\Auth::provider('external', function ($app, array $config) {
+            return new \App\Auth\ExternalUserProvider($app->make(\App\Services\ExternalUserService::class));
+        });
     }
 }

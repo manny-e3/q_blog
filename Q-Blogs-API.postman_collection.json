@@ -572,6 +572,30 @@
           }
         },
         {
+          "name": "Get User Notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/notifications/user/:userId", "host": ["{{base_url}}"], "path": ["notifications", "user", ":userId"], "variable": [{ "key": "userId", "value": "2" }] }
+          }
+        },
+        {
+          "name": "Store Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": 2,\n  \"title\": \"Manual Alert\",\n  \"message\": \"This is a test notification.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/notifications", "host": ["{{base_url}}"], "path": ["notifications"] }
+          }
+        },
+        {
           "name": "Mark Notification as Read",
           "request": {
             "method": "PATCH",

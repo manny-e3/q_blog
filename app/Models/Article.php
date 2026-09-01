@@ -20,27 +20,43 @@ class Article extends Model
         'featured_image',
         'inputter_id',
         'authoriser_id',
-        'category_id',
         'views_count',
         'shares_count',
+        'category_ids',
+        'tag_ids',
+        'pending_changes',
     ];
 
     protected $casts = [
         'is_featured' => 'boolean',
         'views_count' => 'integer',
         'shares_count' => 'integer',
+        'category_ids' => 'array',
+        'tag_ids' => 'array',
+        'pending_changes' => 'array',
     ];
 
+    protected $appends = [
+        'category',
+        'categories',
+        'tags',
+    ];
 
-
-    public function category()
+    public function getCategoryAttribute()
     {
-        return $this->belongsTo(Category::class);
+        return $this->categories->first();
     }
 
-    public function tags()
+    public function getCategoriesAttribute()
     {
-        return $this->belongsToMany(Tag::class);
+        $ids = $this->category_ids ?? [];
+        return Category::whereIn('id', $ids)->get();
+    }
+
+    public function getTagsAttribute()
+    {
+        $ids = $this->tag_ids ?? [];
+        return Tag::whereIn('id', $ids)->get();
     }
 
     public function approvalHistories()

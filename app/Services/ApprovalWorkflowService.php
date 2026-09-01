@@ -13,11 +13,26 @@ class ApprovalWorkflowService
      */
     public function approve(Article $article, Authenticatable $user): Article
     {
-        $article->update([
+        $updateData = [
             'status' => 'published',
             'authoriser_id' => $user->id,
             'reject_reason' => null
-        ]);
+        ];
+
+        if ($article->pending_changes) {
+            $changes = is_array($article->pending_changes)
+                ? $article->pending_changes
+                : json_decode($article->pending_changes, true);
+            if (is_array($changes)) {
+                unset($changes['status']);
+                unset($changes['authoriser_id']);
+                
+                $updateData = array_merge($updateData, $changes);
+            }
+            $updateData['pending_changes'] = null;
+        }
+
+        $article->update($updateData);
 
         ApprovalHistory::create([
             'article_id' => $article->id,
@@ -35,6 +50,9 @@ class ApprovalWorkflowService
 
         // Notify inputter about approval
         resolve(\App\Services\NotificationService::class)->notifyInputterAboutResolution($article, 'published');
+
+        // Notify active newsletter subscribers based on topics
+        \App\Jobs\NotifySubscribersOfPublishedArticle::dispatchSync($article);
 
         return $article;
     }

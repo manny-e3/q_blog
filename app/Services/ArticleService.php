@@ -18,9 +18,6 @@ class ArticleService
     {
         $this->mediaService = $mediaService;
     }
-    /**
-     * Get articles by status for admin.
-     */
     public function getAdminArticlesByStatus(array|string $status)
     {
         $query = Article::query();
@@ -31,7 +28,7 @@ class ArticleService
             $query->where('status', $status);
         }
 
-        return $this->enrichArticles($query->with(['category', 'tags'])->get());
+        return $this->enrichArticles($query->get());
     }
 
     /**
@@ -41,7 +38,6 @@ class ArticleService
     {
         return $this->enrichArticles(Article::where('inputter_id', $user->id)
             ->where('status', $status)
-            ->with(['category', 'tags'])
             ->get());
     }
 
@@ -62,19 +58,6 @@ class ArticleService
         
         $userService = resolve(\App\Services\ExternalUserService::class);
         $user = $userService->getUserById($inputterId);
-        // if ($user) {
-        //     $roleName = '';
-        //     if (isset($user['role'])) {
-        //         if (is_array($user['role'])) {
-        //             $roleName = $user['role']['name'] ?? '';
-        //         } else {
-        //             $roleName = $user['role'];
-        //         }
-        //     }
-        //     if (strcasecmp($roleName, 'Authoriser') === 0) {
-        //         $status = 'published'; // Authorisers publish directly by default
-        //     }
-        // }
 
         // Allow explicit status override (e.g. saving as draft)
         if (isset($data['status'])) {
@@ -93,18 +76,20 @@ class ArticleService
             'featured_image' => $data['featured_image'] ?? null,
             'inputter_id' => $inputterId,
             'authoriser_id' => $data['authoriser_id'] ?? null,
-            'category_id' => $data['category_id'],
+            'category_ids' => $data['category_id'] ?? null,
+            'tag_ids' => $data['tags'] ?? null,
         ]);
 
-        if (!empty($data['tags'])) {
-            $article->tags()->sync($data['tags']);
+        if ($status === 'pending') {
+            if (!empty($article->authoriser_id)) {
+                resolve(\App\Services\NotificationService::class)->notifyAuthoriserAboutPendingArticle($article, (int)$article->authoriser_id);
+            } else {
+                resolve(\App\Services\NotificationService::class)->notifyAuthorisersAboutPendingArticle($article);
+            }
+            resolve(\App\Services\NotificationService::class)->notifyInputterAboutSubmission($article);
         }
 
-        if ($status === 'pending' && !empty($article->authoriser_id)) {
-            resolve(\App\Services\NotificationService::class)->notifyAuthoriserAboutPendingArticle($article, (int)$article->authoriser_id);
-        }
-
-        return $this->enrichArticles($article->load(['category', 'tags']));
+        return $this->enrichArticles($article);
     }
 
     /**
@@ -118,26 +103,79 @@ class ArticleService
     /**
      * Update article.
      */
-    public function updateArticle(Article $article, array $data): Article
+    public function updateArticle(Article $article, array $data, \Illuminate\Contracts\Auth\Authenticatable $user = null): Article
     {
-        if (isset($data['title'])) {
-            $slug = Str::slug($data['title']);
-            $count = Article::where('slug', 'like', $slug . '%')->where('id', '!=', $article->id)->count();
-            if ($count > 0) {
-                $slug = $slug . '-' . ($count + 1);
-            }
-            $article->slug = $slug;
+        if (isset($data['category_id'])) {
+            $data['category_ids'] = $data['category_id'];
+            unset($data['category_id']);
+        }
+
+        if (isset($data['tags'])) {
+            $data['tag_ids'] = $data['tags'];
+            unset($data['tags']);
         }
 
         $this->processFeaturedImage($data);
 
-        $article->update($data);
+        if ($user && $article->inputter_id === $user->id) {
+            // For INPUTTER, we hold changes as pending changes
+            $currentState = [
+                'title' => $article->title,
+                'content' => $article->content,
+                'summary' => $article->summary,
+                'is_featured' => $article->is_featured,
+                'featured_image' => $article->featured_image,
+                'category_ids' => $article->category_ids,
+                'tag_ids' => $article->tag_ids,
+            ];
 
-        if (isset($data['tags'])) {
-            $article->tags()->sync($data['tags']);
+            // Update the authoriser_id immediately on the model if provided
+            if (isset($data['authoriser_id'])) {
+                $article->authoriser_id = $data['authoriser_id'];
+            }
+
+            $pendingChanges = array_merge($currentState, $data);
+            unset($pendingChanges['authoriser_id']);
+
+            if (isset($data['title'])) {
+                $slug = Str::slug($data['title']);
+                $count = Article::where('slug', 'like', $slug . '%')->where('id', '!=', $article->id)->count();
+                if ($count > 0) {
+                    $slug = $slug . '-' . ($count + 1);
+                }
+                $pendingChanges['slug'] = $slug;
+            } else {
+                $pendingChanges['slug'] = $article->slug;
+            }
+
+            $article->update([
+                'status' => 'pending',
+                'reject_reason' => null,
+                'authoriser_id' => $article->authoriser_id,
+                'pending_changes' => $pendingChanges,
+            ]);
+
+            // Notify authorisers about the pending updates
+            if (!empty($article->authoriser_id)) {
+                resolve(\App\Services\NotificationService::class)->notifyAuthoriserAboutPendingArticle($article, (int)$article->authoriser_id, true);
+            } else {
+                resolve(\App\Services\NotificationService::class)->notifyAuthorisersAboutPendingArticle($article, true);
+            }
+        } else {
+            // Direct update for authorisers or system calls
+            if (isset($data['title'])) {
+                $slug = Str::slug($data['title']);
+                $count = Article::where('slug', 'like', $slug . '%')->where('id', '!=', $article->id)->count();
+                if ($count > 0) {
+                    $slug = $slug . '-' . ($count + 1);
+                }
+                $article->slug = $slug;
+            }
+
+            $article->update($data);
         }
 
-        return $this->enrichArticles($article->load(['category', 'tags']));
+        return $this->enrichArticles($article);
     }
 
     /**
@@ -187,6 +225,12 @@ class ArticleService
                 'reason' => 'Directly published by Authoriser.'
             ]);
 
+            // Notify the inputter about direct publishing
+            resolve(\App\Services\NotificationService::class)->notifyInputterAboutResolution($article, 'published');
+
+            // Notify active newsletter subscribers based on topics
+            \App\Jobs\NotifySubscribersOfPublishedArticle::dispatchSync($article);
+
             return [
                 'success' => true,
                 'message' => 'Article published directly.',
@@ -200,7 +244,12 @@ class ArticleService
             // Notify the specific authoriser assigned to the article
             if (!empty($article->authoriser_id)) {
                 resolve(\App\Services\NotificationService::class)->notifyAuthoriserAboutPendingArticle($article, (int)$article->authoriser_id);
+            } else {
+                resolve(\App\Services\NotificationService::class)->notifyAuthorisersAboutPendingArticle($article);
             }
+
+            // Notify the Inputter about successful submission
+            resolve(\App\Services\NotificationService::class)->notifyInputterAboutSubmission($article);
 
             return [
                 'success' => true,
@@ -221,6 +270,10 @@ class ArticleService
     public function unpublishArticle(Article $article): Article
     {
         $article->update(['status' => 'draft']);
+        
+        // Notify the inputter about the unpublish/draft transition
+        resolve(\App\Services\NotificationService::class)->notifyInputterAboutUnpublish($article);
+
         return $this->enrichArticles($article);
     }
 
@@ -231,12 +284,10 @@ class ArticleService
     {
         $featured = Article::where('status', 'published')
             ->where('is_featured', true)
-            ->with(['category', 'tags'])
             ->first();
 
         $latest = Article::where('status', 'published')
             ->where('is_featured', false)
-            ->with(['category', 'tags'])
             ->latest()
             ->limit(5)
             ->get();
@@ -247,19 +298,18 @@ class ArticleService
         ]);
     }
 
-    /**
-     * Get filterable/paginated public articles.
-     */
-    public function getPublicArticles(array $filters, string $sort = 'latest', int $limit = 12): LengthAwarePaginator
+    public function getPublicArticles(array $filters, string $sort = 'latest')
     {
-        $query = Article::where('status', 'published')
-            ->with(['category', 'tags']);
+        $query = Article::where('status', 'published');
 
         if (!empty($filters['category'])) {
             $category = $filters['category'];
-            $query->whereHas('category', function ($q) use ($category) {
-                $q->where('slug', $category)->orWhere('id', $category);
-            });
+            $categoryModel = \App\Models\Category::where('slug', $category)->orWhere('id', $category)->first();
+            if ($categoryModel) {
+                $query->whereJsonContains('category_ids', $categoryModel->id);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
         }
 
         if (!empty($filters['author'])) {
@@ -268,9 +318,12 @@ class ArticleService
 
         if (!empty($filters['tag'])) {
             $tag = $filters['tag'];
-            $query->whereHas('tags', function ($q) use ($tag) {
-                $q->where('slug', $tag)->orWhere('id', $tag);
-            });
+            $tagModel = \App\Models\Tag::where('slug', $tag)->orWhere('id', $tag)->first();
+            if ($tagModel) {
+                $query->whereJsonContains('tag_ids', $tagModel->id);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
         }
 
         if ($sort === 'latest') {
@@ -283,7 +336,7 @@ class ArticleService
             $query->orderBy('shares_count', 'desc');
         }
 
-        return $this->enrichArticles($query->paginate($limit));
+        return $this->enrichArticles($query->get());
     }
 
     public function searchArticles(string $searchTerm)
@@ -301,8 +354,10 @@ class ArticleService
             $inputterIds = $matchingUsers->pluck('id')->toArray();
         }
 
+        $matchingTagIds = \App\Models\Tag::where('name', 'like', '%' . $searchTerm . '%')->pluck('id')->toArray();
+
         return $this->enrichArticles(Article::where('status', 'published')
-            ->where(function ($query) use ($searchTerm, $inputterIds) {
+            ->where(function ($query) use ($searchTerm, $inputterIds, $matchingTagIds) {
                 $query->where('title', 'like', '%' . $searchTerm . '%')
                     ->orWhere('content', 'like', '%' . $searchTerm . '%');
                 
@@ -310,11 +365,12 @@ class ArticleService
                     $query->orWhereIn('inputter_id', $inputterIds);
                 }
                 
-                $query->orWhereHas('tags', function ($q) use ($searchTerm) {
-                    $q->where('name', 'like', '%' . $searchTerm . '%');
-                });
+                if (!empty($matchingTagIds)) {
+                    foreach ($matchingTagIds as $tagId) {
+                        $query->orWhereJsonContains('tag_ids', $tagId);
+                    }
+                }
             })
-            ->with(['category', 'tags'])
             ->get());
     }
 
@@ -322,34 +378,49 @@ class ArticleService
     {
         $article = Article::where('slug', $slug)
             ->where('status', 'published')
-            ->with(['category', 'tags'])
             ->first();
 
         return $article ? $this->enrichArticles($article) : null;
     }
 
-    /**
-     * Find article by ID.
-     */
     public function findArticleById(int $id): ?Article
     {
-        $article = Article::with(['category', 'tags'])->find($id);
-        return $article ? $this->enrichArticles($article) : null;
+        $article = Article::find($id);
+        if ($article) {
+            if ($article->pending_changes) {
+                $changes = is_array($article->pending_changes)
+                    ? $article->pending_changes
+                    : json_decode($article->pending_changes, true);
+                if (is_array($changes)) {
+                    foreach ($changes as $key => $value) {
+                        $article->setAttribute($key, $value);
+                    }
+                }
+            }
+            return $this->enrichArticles($article);
+        }
+        return null;
     }
 
     public function getRelatedArticles(Article $article, int $limit = 4)
     {
-        $tagIds = $article->tags->pluck('id')->toArray();
+        $tagIds = $article->tag_ids ?? [];
+        $categoryIds = $article->category_ids ?? [];
 
         return $this->enrichArticles(Article::where('status', 'published')
             ->where('id', '!=', $article->id)
-            ->where(function ($query) use ($article, $tagIds) {
-                $query->where('category_id', $article->category_id)
-                    ->orWhereHas('tags', function ($q) use ($tagIds) {
-                        $q->whereIn('tags.id', $tagIds);
-                    });
+            ->where(function ($query) use ($categoryIds, $tagIds) {
+                if (!empty($categoryIds)) {
+                    foreach ($categoryIds as $catId) {
+                        $query->orWhereJsonContains('category_ids', $catId);
+                    }
+                }
+                if (!empty($tagIds)) {
+                    foreach ($tagIds as $tagId) {
+                        $query->orWhereJsonContains('tag_ids', $tagId);
+                    }
+                }
             })
-            ->with(['category', 'tags'])
             ->limit($limit)
             ->get());
     }

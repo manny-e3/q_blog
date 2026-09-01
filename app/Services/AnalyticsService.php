@@ -51,14 +51,20 @@ class AnalyticsService
      */
     public function getTopCategories(int $limit = 5)
     {
-        return Category::select('categories.id', 'categories.name', 'categories.slug')
-            ->leftJoin('articles', 'articles.category_id', '=', 'categories.id')
-            ->selectRaw('SUM(COALESCE(articles.views_count, 0)) as total_views')
-            ->selectRaw('SUM(COALESCE(articles.shares_count, 0)) as total_shares')
-            ->groupBy('categories.id', 'categories.name', 'categories.slug')
-            ->orderBy('total_views', 'desc')
-            ->limit($limit)
-            ->get();
+        $categories = Category::all(['id', 'name', 'slug']);
+        $articles = Article::where('status', 'published')->get(['category_ids', 'views_count', 'shares_count']);
+
+        $categoriesWithMetrics = $categories->map(function ($category) use ($articles) {
+            $matchingArticles = $articles->filter(function ($article) use ($category) {
+                return is_array($article->category_ids) && in_array($category->id, $article->category_ids);
+            });
+            
+            $category->total_views = (int) $matchingArticles->sum('views_count');
+            $category->total_shares = (int) $matchingArticles->sum('shares_count');
+            return $category;
+        });
+
+        return $categoriesWithMetrics->sortByDesc('total_views')->take($limit)->values();
     }
 
     public function getTopAuthors(int $limit = 5)
@@ -173,7 +179,7 @@ class AnalyticsService
      */
     public function getArticlesForCsvExport()
     {
-        return Article::with('category')->get();
+        return Article::all();
     }
 
     /**

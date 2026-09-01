@@ -153,6 +153,12 @@ class QBlogApiTest extends TestCase
                 'status' => 'pending'
             ]);
 
+        // Assert submission confirmation notification was sent to inputter
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => 2,
+            'title' => 'Article Submitted Awaiting Approval',
+        ]);
+
         // 3. Admin rejects article
         $response = $this->withHeaders([
             'Authorization' => 'Basic ' . base64_encode('admin@test.com:password')
@@ -165,6 +171,12 @@ class QBlogApiTest extends TestCase
                 'status' => 'rejected',
                 'reject_reason' => 'Formatting curve issue.'
             ]);
+
+        // Assert rejection email was sent
+        \Illuminate\Support\Facades\Mail::assertSent(function (\App\Mail\ArticleResolutionMail $mail) {
+            return $mail->hasTo('author@test.com') && 
+                   $mail->status === 'rejected';
+        });
 
         // 4. Submit for approval again
         $this->withHeaders([
@@ -180,6 +192,12 @@ class QBlogApiTest extends TestCase
             ->assertJsonFragment([
                 'status' => 'published'
             ]);
+
+        // Assert approval email was sent
+        \Illuminate\Support\Facades\Mail::assertSent(function (\App\Mail\ArticleResolutionMail $mail) {
+            return $mail->hasTo('author@test.com') && 
+                   $mail->status === 'published';
+        });
 
         $slug = $response->json('article.slug') ?? $response->json('slug');
 
@@ -284,7 +302,7 @@ class QBlogApiTest extends TestCase
 
         // 2. Update Article with a string URL
         $response = $this->withHeaders([
-            'Authorization' => 'Basic ' . base64_encode('author@test.com:password')
+            'Authorization' => 'Basic ' . base64_encode('admin@test.com:password')
         ])->patchJson("/api/v1/cms/articles/{$articleId}", [
             'featured_image' => 'https://example.com/other-image.jpg'
         ]);
@@ -297,7 +315,7 @@ class QBlogApiTest extends TestCase
         // 3. Update Article with a new uploaded file
         $newFile = \Illuminate\Http\UploadedFile::fake()->image('new-featured.jpg');
         $response = $this->withHeaders([
-            'Authorization' => 'Basic ' . base64_encode('author@test.com:password')
+            'Authorization' => 'Basic ' . base64_encode('admin@test.com:password')
         ])->patchJson("/api/v1/cms/articles/{$articleId}", [
             'featured_image' => $newFile
         ]);
@@ -349,7 +367,7 @@ class QBlogApiTest extends TestCase
         // 2. Update Article with a new base64 image
         $newBase64Image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
         $response = $this->withHeaders([
-            'Authorization' => 'Basic ' . base64_encode('author@test.com:password')
+            'Authorization' => 'Basic ' . base64_encode('admin@test.com:password')
         ])->patchJson("/api/v1/cms/articles/{$articleId}", [
             'featured_image' => $newBase64Image
         ]);
@@ -395,9 +413,9 @@ class QBlogApiTest extends TestCase
             'title' => 'CMS Edit Test',
             'slug' => 'cms-edit-test',
             'content' => 'Content here.',
-            'category_id' => $this->category->id,
             'inputter_id' => 2, // Test Author
-            'status' => 'draft'
+            'status' => 'draft',
+            'category_ids' => [$this->category->id],
         ]);
 
         // 1. Unauthenticated request
@@ -478,6 +496,59 @@ class QBlogApiTest extends TestCase
             ]);
     }
 
+    public function test_newsletter_subscribe_with_extra_fields()
+    {
+        $response = $this->postJson('/api/v1/newsletter/subscribe', [
+            'first_name' => 'Ada',
+            'last_name' => 'Obi',
+            'email' => 'ada.obi@example.com',
+            'consent' => true,
+            'organisation' => 'FMDQ Group',
+            'role' => 'Analyst',
+            'topics' => ['Sustainability', 'Market & Economy'],
+            'frequency' => 'Weekly Digest'
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonFragment([
+                'first_name' => 'Ada',
+                'last_name' => 'Obi',
+                'email' => 'ada.obi@example.com',
+                'organisation' => 'FMDQ Group',
+                'role' => 'Analyst',
+                'topics' => ['Sustainability', 'Market & Economy'],
+                'frequency' => 'Weekly Digest'
+            ]);
+
+        $this->assertDatabaseHas('newsletter_subscriptions', [
+            'email' => 'ada.obi@example.com',
+            'organisation' => 'FMDQ Group',
+            'role' => 'Analyst',
+            'frequency' => 'Weekly Digest'
+        ]);
+    }
+
+    public function test_newsletter_subscribe_validation_errors()
+    {
+        // 1. Invalid topics (not in the list)
+        $response = $this->postJson('/api/v1/newsletter/subscribe', [
+            'email' => 'invalid.topics@example.com',
+            'consent' => true,
+            'topics' => ['Random Topic']
+        ]);
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['topics.0']);
+
+        // 2. Invalid frequency (not in the list)
+        $response = $this->postJson('/api/v1/newsletter/subscribe', [
+            'email' => 'invalid.frequency@example.com',
+            'consent' => true,
+            'frequency' => 'Hourly'
+        ]);
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['frequency']);
+    }
+
     public function test_cms_unpublish_authorization()
     {
         // 1. Create article owned by user 3 (another user)
@@ -485,9 +556,9 @@ class QBlogApiTest extends TestCase
             'title' => 'Other User Article',
             'slug' => 'other-user-article',
             'content' => 'Content here.',
-            'category_id' => $this->category->id,
             'inputter_id' => 3,
-            'status' => 'published'
+            'status' => 'published',
+            'category_ids' => [$this->category->id],
         ]);
 
         // 2. Author (inputter, id=2) attempts to unpublish article owned by inputter_id=3 -> Forbidden (403)
@@ -506,6 +577,351 @@ class QBlogApiTest extends TestCase
             ->assertJsonFragment([
                 'status' => 'draft'
             ]);
+    }
+
+    public function test_notification_endpoints()
+    {
+        // 1. Store notification successfully
+        $response = $this->withHeaders([
+            'Authorization' => 'Basic ' . base64_encode('admin@test.com:password')
+        ])->postJson('/api/v1/notifications', [
+            'user_id' => 2,
+            'title' => 'Manual Alert',
+            'message' => 'This is a test notification.'
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonFragment([
+                'message' => 'Notification created successfully.'
+            ])
+            ->assertJsonStructure([
+                'message',
+                'notification' => [
+                    'id',
+                    'user_id',
+                    'title',
+                    'message',
+                    'created_at',
+                    'updated_at'
+                ]
+            ]);
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => 2,
+            'title' => 'Manual Alert',
+            'message' => 'This is a test notification.'
+        ]);
+
+        $notificationId = $response->json('notification.id');
+
+        // 2. Store notification for non-existent user -> 404
+        $response = $this->withHeaders([
+            'Authorization' => 'Basic ' . base64_encode('admin@test.com:password')
+        ])->postJson('/api/v1/notifications', [
+            'user_id' => 999,
+            'title' => 'Manual Alert',
+            'message' => 'This is a test notification.'
+        ]);
+
+        $response->assertStatus(404)
+            ->assertJson([
+                'message' => 'User not found.'
+            ]);
+
+        // 3. Validation fails for missing fields -> 422
+        $response = $this->withHeaders([
+            'Authorization' => 'Basic ' . base64_encode('admin@test.com:password')
+        ])->postJson('/api/v1/notifications', [
+            'user_id' => 2,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['title', 'message']);
+
+        // 4. Create another notification for user_id = 1
+        $this->withHeaders([
+            'Authorization' => 'Basic ' . base64_encode('admin@test.com:password')
+        ])->postJson('/api/v1/notifications', [
+            'user_id' => 1,
+            'title' => 'Admin Alert',
+            'message' => 'This is for admin.'
+        ]);
+
+        // 5. Retrieve notifications globally -> should return both notifications (count = 2)
+        $response = $this->withHeaders([
+            'Authorization' => 'Basic ' . base64_encode('author@test.com:password')
+        ])->getJson('/api/v1/notifications');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(2);
+
+        // 6. Retrieve notifications for user (id = 2) -> should have only 1 notification (user_id = 2)
+        $response = $this->withHeaders([
+            'Authorization' => 'Basic ' . base64_encode('author@test.com:password')
+        ])->getJson('/api/v1/notifications/user/2');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1)
+            ->assertJsonFragment([
+                'id' => $notificationId,
+                'user_id' => 2,
+                'title' => 'Manual Alert',
+                'read_at' => null
+            ]);
+
+        // 7. Mark single notification as read -> 200
+        $response = $this->withHeaders([
+            'Authorization' => 'Basic ' . base64_encode('author@test.com:password')
+        ])->patchJson("/api/v1/notifications/{$notificationId}/read");
+
+        $response->assertStatus(200)
+            ->assertJsonFragment([
+                'message' => 'Notification marked as read.'
+            ]);
+
+        $this->assertNotNull($response->json('notification.read_at'));
+
+        // 8. Mark all notifications as read -> 200
+        $response = $this->withHeaders([
+            'Authorization' => 'Basic ' . base64_encode('author@test.com:password')
+        ])->patchJson('/api/v1/notifications/read-all');
+
+        $response->assertStatus(200)
+            ->assertJsonFragment([
+                'message' => 'All notifications marked as read.'
+            ]);
+    }
+
+    public function test_docs_page_loads()
+    {
+        $response = $this->get('/docs');
+        $response->assertStatus(200);
+    }
+
+    public function test_inputter_edit_pending_approval_workflow()
+    {
+        // 1. Create a published article
+        $article = Article::create([
+            'title' => 'Original Live Title',
+            'slug' => 'original-live-title',
+            'content' => 'Original Live Content',
+            'summary' => 'Original Live Summary',
+            'status' => 'published',
+            'inputter_id' => 2, // Test Author
+            'authoriser_id' => 1, // Test Admin (AUTHORISER)
+            'category_ids' => [$this->category->id],
+        ]);
+
+        // 2. Inputter updates article via PATCH
+        $response = $this->withHeaders([
+            'Authorization' => 'Basic ' . base64_encode('author@test.com:password')
+        ])->patchJson("/api/v1/cms/articles/{$article->id}", [
+            'title' => 'Pending Update Title',
+            'content' => 'Pending Update Content',
+            'summary' => 'Pending Update Summary',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonFragment([
+                'status' => 'pending'
+            ]);
+
+        // Verify the response contains pending changes
+        $this->assertNotNull($response->json('pending_changes'));
+        $this->assertEquals('Pending Update Title', $response->json('pending_changes.title'));
+
+        // Verify database live columns are UNCHANGED
+        $dbArticle = Article::find($article->id);
+        $this->assertEquals('Original Live Title', $dbArticle->title);
+        $this->assertEquals('Original Live Content', $dbArticle->content);
+
+        // Verify notification was sent to authoriser
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => 1,
+            'title' => 'Article Update Awaiting Approval',
+        ]);
+
+        // 3. Authoriser approves the pending changes
+        $response = $this->withHeaders([
+            'Authorization' => 'Basic ' . base64_encode('admin@test.com:password')
+        ])->postJson("/api/v1/approvals/{$article->id}/approve");
+
+        $response->assertStatus(200)
+            ->assertJsonFragment([
+                'status' => 'published'
+            ]);
+
+        // Verify database live columns are now updated and pending_changes is cleared
+        $approvedArticle = Article::find($article->id);
+        $this->assertEquals('Pending Update Title', $approvedArticle->title);
+        $this->assertEquals('Pending Update Content', $approvedArticle->content);
+        $this->assertNull($approvedArticle->pending_changes);
+
+        // Assert approval resolution email was sent
+        \Illuminate\Support\Facades\Mail::assertSent(function (\App\Mail\ArticleResolutionMail $mail) {
+            return $mail->hasTo('author@test.com') && 
+                   $mail->status === 'published';
+        });
+    }
+
+    public function test_inputter_updates_assigned_authoriser()
+    {
+        // Mock ExternalUserService with an additional authoriser (ID = 3)
+        $mockUserService = $this->createMock(\App\Services\ExternalUserService::class);
+        $usersCollection = collect([
+            1 => [
+                'id' => 1,
+                'firstname' => 'Test',
+                'lastname' => 'Admin',
+                'email' => 'admin@test.com',
+                'role' => 'AUTHORISER',
+                'status' => 'active'
+            ],
+            2 => [
+                'id' => 2,
+                'firstname' => 'Test',
+                'lastname' => 'Author',
+                'email' => 'author@test.com',
+                'role' => 'INPUTTER',
+                'status' => 'active'
+            ],
+            3 => [
+                'id' => 3,
+                'firstname' => 'Second',
+                'lastname' => 'Authoriser',
+                'email' => 'authoriser3@test.com',
+                'role' => 'AUTHORISER',
+                'status' => 'active'
+            ]
+        ]);
+        $mockUserService->method('getAllUsers')->willReturn($usersCollection);
+        $mockUserService->method('getUserById')->willReturnCallback(function ($id) use ($usersCollection) {
+            return $usersCollection->get($id);
+        });
+        $this->app->instance(\App\Services\ExternalUserService::class, $mockUserService);
+
+        // 1. Create a published article assigned to Authoriser 1
+        $article = Article::create([
+            'title' => 'Live Title',
+            'slug' => 'live-title',
+            'content' => 'Live Content',
+            'status' => 'published',
+            'inputter_id' => 2,
+            'authoriser_id' => 1,
+            'category_ids' => [$this->category->id],
+        ]);
+
+        // 2. Inputter updates article and selects Authoriser 3
+        $response = $this->withHeaders([
+            'Authorization' => 'Basic ' . base64_encode('author@test.com:password')
+        ])->patchJson("/api/v1/cms/articles/{$article->id}", [
+            'title' => 'New Title',
+            'authoriser_id' => 3,
+        ]);
+
+        $response->assertStatus(200);
+
+        // Verify live authoriser_id is updated immediately to 3
+        $dbArticle = Article::find($article->id);
+        $this->assertEquals(3, $dbArticle->authoriser_id);
+
+        // Verify title change is in pending_changes (not live yet)
+        $this->assertEquals('Live Title', $dbArticle->title);
+        $this->assertEquals('New Title', $dbArticle->pending_changes['title']);
+
+        // Verify notification was sent to the newly selected authoriser (user_id = 3)
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => 3,
+            'title' => 'Article Update Awaiting Approval',
+        ]);
+    }
+
+    public function test_newsletter_welcome_email_and_unsubscribe()
+    {
+        \Illuminate\Support\Facades\Mail::fake();
+
+        // 1. Subscribe to the newsletter
+        $response = $this->postJson('/api/v1/newsletter/subscribe', [
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+            'email' => 'jane.doe@example.com',
+            'consent' => true,
+            'topics' => ['Thought Leadership'],
+            'frequency' => 'Monthly Highlights'
+        ]);
+
+        $response->assertStatus(201);
+
+        // Verify the subscription is in database and status is active
+        $this->assertDatabaseHas('newsletter_subscriptions', [
+            'email' => 'jane.doe@example.com',
+            'status' => 'active',
+        ]);
+
+        // Verify welcome email was sent
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\NewsletterWelcomeMail::class, function ($mail) {
+            return $mail->hasTo('jane.doe@example.com') && 
+                   $mail->subscription->first_name === 'Jane' && 
+                   str_contains($mail->unsubscribeUrl, '/newsletter/unsubscribe');
+        });
+
+        // Get the sent mail to retrieve unsubscribe link
+        $sentMail = collect(\Illuminate\Support\Facades\Mail::sent(\App\Mail\NewsletterWelcomeMail::class))->first();
+        $unsubscribeUrl = $sentMail->unsubscribeUrl;
+
+        // 2. Try to access unsubscribe link with manipulated or invalid signature
+        $invalidUrl = $unsubscribeUrl . 'manipulated';
+        $response = $this->get($invalidUrl);
+        $response->assertStatus(403);
+
+        // Verify subscription is still active
+        $this->assertDatabaseHas('newsletter_subscriptions', [
+            'email' => 'jane.doe@example.com',
+            'status' => 'active',
+        ]);
+
+        // 3. Access unsubscribe link with valid signature
+        $response = $this->get($unsubscribeUrl);
+        $response->assertStatus(200)
+            ->assertViewIs('emails.unsubscribed')
+            ->assertSee('Unsubscribed')
+            ->assertSee('jane.doe@example.com');
+
+        // Verify subscription status was changed to unsubscribed (not deleted)
+        $this->assertDatabaseHas('newsletter_subscriptions', [
+            'email' => 'jane.doe@example.com',
+            'status' => 'unsubscribed',
+        ]);
+
+        // 4. Try subscribing again with the same email (should reactivate)
+        $response = $this->postJson('/api/v1/newsletter/subscribe', [
+            'first_name' => 'Jane Updated',
+            'last_name' => 'Doe Updated',
+            'email' => 'jane.doe@example.com',
+            'consent' => true,
+            'topics' => ['Innovation & Trends'],
+            'frequency' => 'Weekly Digest'
+        ]);
+
+        $response->assertStatus(201);
+
+        // Verify database is updated and status is active again
+        $this->assertDatabaseHas('newsletter_subscriptions', [
+            'email' => 'jane.doe@example.com',
+            'first_name' => 'Jane Updated',
+            'status' => 'active',
+        ]);
+
+        // 5. Try subscribing again while already active (should fail with validation error)
+        $response = $this->postJson('/api/v1/newsletter/subscribe', [
+            'first_name' => 'Jane Duplicate',
+            'last_name' => 'Doe Duplicate',
+            'email' => 'jane.doe@example.com',
+            'consent' => true,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['email']);
     }
 }
 

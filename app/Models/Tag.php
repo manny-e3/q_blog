@@ -14,8 +14,8 @@ class Tag extends Model
         'slug',
     ];
 
-    public function articles()
+    public function getArticlesAttribute()
     {
-        return $this->belongsToMany(Article::class);
+        return Article::whereJsonContains('tag_ids', $this->id)->get();
     }
 }

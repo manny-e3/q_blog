@@ -14,9 +14,15 @@ class NewsletterSubscription extends Model
         'last_name',
         'email',
         'consent_given',
+        'organisation',
+        'role',
+        'topics',
+        'frequency',
+        'status',
     ];
 
     protected $casts = [
         'consent_given' => 'boolean',
+        'topics' => 'array',
     ];
 }

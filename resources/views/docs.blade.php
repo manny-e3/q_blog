@@ -716,6 +716,14 @@
                         response: { id: 10, title: "Nigeria Market Cap", slug: "nigeria-market-cap", status: "pending", authoriser_id: 1, featured_image: "/storage/media/1717318800_market_cap.png" }
                     },
                     {
+                        method: "PATCH",
+                        path: "/cms/articles/{id}",
+                        desc: "Update an existing article. For INPUTTERs, updates do not modify the active content immediately; instead, they are held as pending changes until approved by an AUTHORISER, and the article status is changed to pending.",
+                        auth: true,
+                        body: { title: "Nigeria Market Cap Updated", content: "### Content info updated", category_id: [1], tags: [1], is_featured: false, authoriser_id: 1 },
+                        response: { id: 10, title: "Nigeria Market Cap", slug: "nigeria-market-cap", status: "pending", authoriser_id: 1, pending_changes: { title: "Nigeria Market Cap Updated", content: "### Content info updated", category_ids: [1], tag_ids: [1], is_featured: false } }
+                    },
+                    {
                         method: "POST",
                         path: "/cms/articles/preview",
                         desc: "Live converts markdown payload to HTML format.",
@@ -769,6 +777,70 @@
                                 ]
                             }
                         ]
+                    }
+                ]
+            },
+            {
+                name: "Admin Articles",
+                desc: "Retrieve and manage articles across all statuses and authors.",
+                endpoints: [
+                    {
+                        method: "GET",
+                        path: "/cms/admin/articles/all",
+                        desc: "Retrieves list of all articles across all statuses and authors in the system.",
+                        auth: true,
+                        body: {},
+                        response: [
+                            {
+                                id: 10,
+                                title: "Nigeria Market Cap",
+                                slug: "nigeria-market-cap",
+                                content: "### Content info",
+                                summary: "Market capitalization details",
+                                status: "pending",
+                                reject_reason: null,
+                                is_featured: false,
+                                inputter_id: 2,
+                                authoriser_id: null,
+                                category_id: 1,
+                                views_count: 0,
+                                shares_count: 0,
+                                created_at: "2026-06-16T12:00:00.000000Z",
+                                updated_at: "2026-06-16T12:05:00.000000Z"
+                            }
+                        ]
+                    },
+                    {
+                        method: "GET",
+                        path: "/cms/admin/articles/published",
+                        desc: "Retrieves list of all published articles across the entire system.",
+                        auth: true,
+                        body: {},
+                        response: []
+                    },
+                    {
+                        method: "GET",
+                        path: "/cms/admin/articles/unpublished",
+                        desc: "Retrieves list of all unpublished (draft) articles across the entire system.",
+                        auth: true,
+                        body: {},
+                        response: []
+                    },
+                    {
+                        method: "GET",
+                        path: "/cms/admin/articles/pending",
+                        desc: "Retrieves list of all articles currently pending moderator approval.",
+                        auth: true,
+                        body: {},
+                        response: []
+                    },
+                    {
+                        method: "GET",
+                        path: "/cms/admin/articles/rejected",
+                        desc: "Retrieves list of all rejected articles in the system.",
+                        auth: true,
+                        body: {},
+                        response: []
                     }
                 ]
             },
@@ -872,8 +944,314 @@
                 ]
             },
             {
+                name: "Category Management",
+                desc: "Retrieve, create, update, deactivate, and delete blog categories.",
+                endpoints: [
+                    {
+                        method: "GET",
+                        path: "/categories",
+                        desc: "List all active categories.",
+                        auth: false,
+                        body: {},
+                        response: [
+                            {
+                                id: 1,
+                                name: "Market Review",
+                                slug: "market-review",
+                                status: "active",
+                                deactivation_reason: null,
+                                created_at: "2026-06-16T12:00:00.000000Z",
+                                updated_at: "2026-06-16T12:05:00.000000Z"
+                            }
+                        ]
+                    },
+                    {
+                        method: "GET",
+                        path: "/categories/{id}",
+                        desc: "Get a single category by ID.",
+                        auth: false,
+                        body: {},
+                        response: {
+                            id: 1,
+                            name: "Market Review",
+                            slug: "market-review",
+                            status: "active",
+                            deactivation_reason: null,
+                            created_at: "2026-06-16T12:00:00.000000Z",
+                            updated_at: "2026-06-16T12:05:00.000000Z"
+                        }
+                    },
+                    {
+                        method: "POST",
+                        path: "/categories",
+                        desc: "Create a new category.",
+                        auth: true,
+                        body: {
+                            name: "Technology"
+                        },
+                        response: {
+                            id: 2,
+                            name: "Technology",
+                            slug: "technology",
+                            status: "active",
+                            deactivation_reason: null,
+                            created_at: "2026-07-14T12:00:00.000000Z",
+                            updated_at: "2026-07-14T12:00:00.000000Z"
+                        }
+                    },
+                    {
+                        method: "PATCH",
+                        path: "/categories/{id}",
+                        desc: "Update an existing category.",
+                        auth: true,
+                        body: {
+                            name: "Tech & Innovation",
+                            status: "active"
+                        },
+                        response: {
+                            id: 2,
+                            name: "Tech & Innovation",
+                            slug: "tech-innovation",
+                            status: "active",
+                            deactivation_reason: null,
+                            created_at: "2026-07-14T12:00:00.000000Z",
+                            updated_at: "2026-07-14T12:10:00.000000Z"
+                        }
+                    },
+                    {
+                        method: "PATCH",
+                        path: "/categories/{id}/deactivate",
+                        desc: "Deactivate a category.",
+                        auth: true,
+                        body: {
+                            reason: "Category no longer relevant."
+                        },
+                        response: {
+                            message: "Category deactivated successfully.",
+                            category: {
+                                id: 2,
+                                name: "Tech & Innovation",
+                                slug: "tech-innovation",
+                                status: "inactive",
+                                deactivation_reason: "Category no longer relevant.",
+                                created_at: "2026-07-14T12:00:00.000000Z",
+                                updated_at: "2026-07-14T12:15:00.000000Z"
+                            }
+                        }
+                    },
+                    {
+                        method: "DELETE",
+                        path: "/categories/{id}",
+                        desc: "Delete an existing category.",
+                        auth: true,
+                        body: {},
+                        response: {
+                            message: "Category deleted successfully."
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Newsletter Management",
+                desc: "Subscribe users to the newsletter, verify captcha, check subscription status, sync subscriptions, and list subscribers.",
+                endpoints: [
+                    {
+                        method: "POST",
+                        path: "/newsletter/subscribe",
+                        desc: "Subscribe an email address to the newsletter.",
+                        auth: false,
+                        body: { email: "subscriber@example.com", firstName: "John", lastName: "Doe", consent: true, captchaToken: "valid-token", organisation: "FMDQ Group", role: "Analyst", topics: ["Sustainability", "Market & Economy"], frequency: "Weekly Digest" },
+                        response: { message: "Successfully subscribed to the Q-BLOG newsletter.", subscription: { id: 1, first_name: "John", last_name: "Doe", email: "subscriber@example.com", consent_given: true, organisation: "FMDQ Group", role: "Analyst", topics: ["Sustainability", "Market & Economy"], frequency: "Weekly Digest", created_at: "2026-07-20T11:44:16.000000Z", updated_at: "2026-07-20T11:44:16.000000Z" } }
+                    },
+                    {
+                        method: "POST",
+                        path: "/newsletter/verify-captcha",
+                        desc: "Verify a CAPTCHA token before newsletter subscription.",
+                        auth: false,
+                        body: { captchaToken: "valid-token" },
+                        response: { success: true, message: "CAPTCHA verification successful." }
+                    },
+                    {
+                        method: "GET",
+                        path: "/newsletter/check",
+                        desc: "Check whether an email is already subscribed.",
+                        auth: false,
+                        query: "email=subscriber@example.com",
+                        body: {},
+                        response: { email: "subscriber@example.com", is_subscribed: true }
+                    },
+                    {
+                        method: "POST",
+                        path: "/newsletter/sync",
+                        desc: "Sync newsletter subscriptions with the FMDQ Newsletter Platform.",
+                        auth: true,
+                        body: {},
+                        response: { success: true, message: "Successfully synced 12 subscribers to the FMDQ Newsletter Platform.", synced_count: 12 }
+                    },
+                    {
+                        method: "GET",
+                        path: "/cms/subscribers",
+                        desc: "Retrieve a paginated list of newsletter subscribers.",
+                        auth: true,
+                        query: "limit=15",
+                        body: {},
+                        response: {
+                            current_page: 1,
+                            data: [
+                                { id: 1, first_name: "John", last_name: "Doe", email: "subscriber@example.com", consent_given: true, organisation: "FMDQ Group", role: "Analyst", topics: ["Sustainability", "Market & Economy"], frequency: "Weekly Digest", created_at: "2026-07-20T11:44:16.000000Z", updated_at: "2026-07-20T11:44:16.000000Z" }
+                            ],
+                            first_page_url: "http://localhost/api/v1/cms/subscribers?page=1",
+                            from: 1,
+                            last_page: 1,
+                            last_page_url: "http://localhost/api/v1/cms/subscribers?page=1",
+                            next_page_url: null,
+                            path: "http://localhost/api/v1/cms/subscribers",
+                            per_page: 15,
+                            prev_page_url: null,
+                            to: 1,
+                            total: 1
+                        }
+                    }
+                ]
+            },
+            {
+                name: "Authors Management",
+                desc: "Create, retrieve, update, and search author profiles.",
+                endpoints: [
+                    {
+                        method: "GET",
+                        path: "/authors",
+                        desc: "Retrieve a list of all authors.",
+                        auth: false,
+                        body: {},
+                        response: [
+                            { id: 534, name: "Faith Admin", email: "faith.idebi@fmdqgroup.com", title: "Head of Market Infrastructure", bio: "Mr. Afolabi is the Head, Market Architecture Division...", expertise: ["Fixed Income Markets", "Yield Analysis", "Monetary Policy"], linkedin_url: "https://www.linkedin.com/in/faith-admin", twitter_url: "https://twitter.com/faith_admin", facebook_url: "https://facebook.com/faith_admin", instagram_url: "https://instagram.com/faith_admin", website_url: "https://faithadmin.com" }
+                        ]
+                    },
+                    {
+                        method: "GET",
+                        path: "/authors/email",
+                        desc: "Retrieve an author by their email address.",
+                        auth: false,
+                        query: "email=faith.idebi@fmdqgroup.com",
+                        body: {},
+                        response: { id: 534, name: "Faith Admin", email: "faith.idebi@fmdqgroup.com", title: "Head of Market Infrastructure", bio: "Mr. Afolabi is the Head, Market Architecture Division...", expertise: ["Fixed Income Markets", "Yield Analysis", "Monetary Policy"], linkedin_url: "https://www.linkedin.com/in/faith-admin", twitter_url: "https://twitter.com/faith_admin", facebook_url: "https://facebook.com/faith_admin", instagram_url: "https://instagram.com/faith_admin", website_url: "https://faithadmin.com" }
+                    },
+                    {
+                        method: "POST",
+                        path: "/authors",
+                        desc: "Create a new author profile.",
+                        auth: true,
+                        body: { id: 534, name: "Faith Admin", email: "faith.idebi@fmdqgroup.com", title: "Head of Market Infrastructure", bio: "Mr. Afolabi is the Head, Market Architecture Division...", expertise: ["Fixed Income Markets", "Yield Analysis", "Monetary Policy"], linkedin_url: "https://www.linkedin.com/in/faith-admin", twitter_url: "https://twitter.com/faith_admin", facebook_url: "https://facebook.com/faith_admin", instagram_url: "https://instagram.com/faith_admin", website_url: "https://faithadmin.com" },
+                        response: { id: 534, name: "Faith Admin", email: "faith.idebi@fmdqgroup.com", title: "Head of Market Infrastructure", bio: "Mr. Afolabi is the Head, Market Architecture Division...", expertise: ["Fixed Income Markets", "Yield Analysis", "Monetary Policy"], linkedin_url: "https://www.linkedin.com/in/faith-admin", twitter_url: "https://twitter.com/faith_admin", facebook_url: "https://facebook.com/faith_admin", instagram_url: "https://instagram.com/faith_admin", website_url: "https://faithadmin.com" }
+                    },
+                    {
+                        method: "PATCH",
+                        path: "/authors/{id}",
+                        desc: "Update an existing author profile.",
+                        auth: true,
+                        body: { name: "Faith Updated", title: "New Title" },
+                        response: { id: 534, name: "Faith Updated", email: "faith.idebi@fmdqgroup.com", title: "New Title", bio: "Mr. Afolabi is the Head, Market Architecture Division...", expertise: ["Fixed Income Markets", "Yield Analysis", "Monetary Policy"], linkedin_url: "https://www.linkedin.com/in/faith-admin", twitter_url: "https://twitter.com/faith_admin", facebook_url: "https://facebook.com/faith_admin", instagram_url: "https://instagram.com/faith_admin", website_url: "https://faithadmin.com" }
+                    }
+                ]
+            },
+            {
+                name: "Notifications",
+                desc: "Send, retrieve, and manage notification read/unread statuses.",
+                endpoints: [
+                    {
+                        method: "GET",
+                        path: "/notifications",
+                        desc: "Retrieve all notifications globally in the system.",
+                        auth: true,
+                        body: {},
+                        response: [
+                            {
+                                id: 1,
+                                user_id: 2,
+                                title: "Manual Alert",
+                                message: "This is a test notification.",
+                                read_at: null,
+                                created_at: "2026-07-29T10:00:00.000000Z",
+                                updated_at: "2026-07-29T10:00:00.000000Z"
+                            }
+                        ]
+                    },
+                    {
+                        method: "GET",
+                        path: "/notifications/user/{userId}",
+                        desc: "Retrieve all notifications for a specific user ID.",
+                        auth: true,
+                        body: {},
+                        response: [
+                            {
+                                id: 1,
+                                user_id: 2,
+                                title: "Manual Alert",
+                                message: "This is a test notification.",
+                                read_at: null,
+                                created_at: "2026-07-29T10:00:00.000000Z",
+                                updated_at: "2026-07-29T10:00:00.000000Z"
+                            }
+                        ]
+                    },
+                    {
+                        method: "POST",
+                        path: "/notifications",
+                        desc: "Create and send a manual notification to a specific user.",
+                        auth: true,
+                        body: {
+                            user_id: 2,
+                            title: "Manual Alert",
+                            message: "This is a test notification."
+                        },
+                        response: {
+                            message: "Notification created successfully.",
+                            notification: {
+                                id: 1,
+                                user_id: 2,
+                                title: "Manual Alert",
+                                message: "This is a test notification.",
+                                read_at: null,
+                                created_at: "2026-07-29T10:00:00.000000Z",
+                                updated_at: "2026-07-29T10:00:00.000000Z"
+                            }
+                        }
+                    },
+                    {
+                        method: "PATCH",
+                        path: "/notifications/{id}/read",
+                        desc: "Mark a single notification as read.",
+                        auth: true,
+                        body: {},
+                        response: {
+                            message: "Notification marked as read.",
+                            notification: {
+                                id: 1,
+                                user_id: 2,
+                                title: "Manual Alert",
+                                message: "This is a test notification.",
+                                read_at: "2026-07-29T10:05:00.000000Z",
+                                created_at: "2026-07-29T10:00:00.000000Z",
+                                updated_at: "2026-07-29T10:05:00.000000Z"
+                            }
+                        }
+                    },
+                    {
+                        method: "PATCH",
+                        path: "/notifications/read-all",
+                        desc: "Mark all notifications for the authenticated user as read.",
+                        auth: true,
+                        body: {},
+                        response: {
+                            message: "All notifications marked as read."
+                        }
+                    }
+                ]
+            },
+            {
                 name: "System Utilities & Health",
-                desc: "Exposes slug generation, reading time utilities, and health status indicators.",
+                desc: "slug generation, reading time utilities, and health status indicators.",
                 endpoints: [
                     {
                         method: "GET",
@@ -1088,6 +1466,11 @@
                 if (artInput === null) return;
                 finalPath = finalPath.replace('{articleId}', artInput);
             }
+            if (finalPath.includes('{userId}')) {
+                const userInput = prompt("Enter value for {userId}:", "2");
+                if (userInput === null) return;
+                finalPath = finalPath.replace('{userId}', userInput);
+            }
 
             // Inject dynamic base URL from Laravel
             const baseUrl = "{{ url('/') }}";
@@ -1158,7 +1541,19 @@
         // Initialize Page
         renderSidebar();
         renderDocs();
-        loadConsole('GET', '/health', 4, 0); // Default to health endpoint
+
+        // Find health endpoint dynamically to load in console
+        let healthModIdx = 5; // fallback
+        let healthEpIdx = 0;
+        apiData.forEach((mod, mIdx) => {
+            mod.endpoints.forEach((ep, eIdx) => {
+                if (ep.path === '/health' && ep.method === 'GET') {
+                    healthModIdx = mIdx;
+                    healthEpIdx = eIdx;
+                }
+            });
+        });
+        loadConsole('GET', '/health', healthModIdx, healthEpIdx);
     </script>
 </body>
 </html>

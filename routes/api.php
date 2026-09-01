@@ -14,6 +14,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\SystemUtilityController;
+use App\Http\Controllers\AuthorController;
 
 Route::prefix('v1')->group(function () {
 
@@ -57,6 +58,7 @@ Route::prefix('v1')->group(function () {
 
     // 7. Admin Article Management
     Route::middleware(['basic.auth'])->group(function () {
+        Route::get('/cms/admin/articles/all', [AdminArticleController::class, 'all']);
         Route::get('/cms/admin/articles/published', [AdminArticleController::class, 'published']);
         Route::get('/cms/admin/articles/unpublished', [AdminArticleController::class, 'unpublished']);
         Route::get('/cms/admin/articles/pending', [AdminArticleController::class, 'pending']);
@@ -100,6 +102,8 @@ Route::prefix('v1')->group(function () {
     // 12. Notifications Module
     Route::middleware('basic.auth')->group(function () {
         Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::get('/notifications/user/{userId}', [NotificationController::class, 'getByUserId']);
+        Route::post('/notifications', [NotificationController::class, 'store']);
         Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
         Route::patch('/notifications/read-all', [NotificationController::class, 'readAll']);
     });
@@ -129,4 +133,15 @@ Route::prefix('v1')->group(function () {
     Route::post('/system/generate-slug', [SystemUtilityController::class, 'generateSlug']);
     Route::post('/system/reading-time', [SystemUtilityController::class, 'readingTime']);
     Route::get('/health', [SystemUtilityController::class, 'health']);
+
+    // 16. Authors Module
+    Route::get('/authors', [AuthorController::class, 'index']);
+    Route::get('/authors/email', [AuthorController::class, 'showByEmail']);
+    Route::middleware(['basic.auth'])->group(function () {
+        Route::post('/authors', [AuthorController::class, 'store']);
+        Route::patch('/authors/{id}', [AuthorController::class, 'update']);
+    });
 });
+
+
+
