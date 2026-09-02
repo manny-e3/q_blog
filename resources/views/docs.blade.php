@@ -1250,7 +1250,7 @@
                 ]
             },
             {
-                name: "System Utilities & Health 22222222",
+                name: "System Utilities & Health",
                 desc: "Exposes slug generation, reading time utilities, and health status indicators.",
                 endpoints: [
                     {
